@@ -2,7 +2,7 @@
 Hey!
 
 So my project, yet another robot.. Come on it's fun!
-It is actualy a balancing bot, with two coaxial weels, engines, sensors and stuff 
+It is actualy a balancing bot, with two coaxial wheels, engines, sensors and stuff 
 allowing it to stand in a non-stable position, and to move in my room.
 
 Why?
