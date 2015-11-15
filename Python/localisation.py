@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3.4
 
 import RPi.GPIO as GPIO
 import math
@@ -35,8 +35,8 @@ def init():
 	global EncoderLeftA_old, EncoderLeftB_old, EncoderRightA_old, EncoderRightB_old
 
 	pos_x = 0.0
-        pos_y = 0.0
-        pos_teta = 0.0
+	pos_y = 0.0
+	pos_teta = 0.0
 
 	GPIO.setwarnings(True)       
 
@@ -69,12 +69,12 @@ def leftEncoder(term):
 	B = GPIO.input(pinLeftB)
 
 	if (not A and not B and not L_A_old and L_B_old or not A and B and L_A_old and L_B_old or A and B and L_A_old and not L_B_old or A and not B and not L_A_old and not L_B_old):
-                # this will be clockwise rotation
-                counts = 1
+		# this will be clockwise rotation
+		counts = 1
 
 
-        elif (not A and B and not L_A_old and not L_B_old or A and B and not L_A_old and L_B_old or A and not B and L_A_old and L_B_old or not A and not B and L_A_old and not L_B_old):
-	# this will be counter-clockwise rotation
+	elif (not A and B and not L_A_old and not L_B_old or A and B and not L_A_old and L_B_old or A and not B and L_A_old and L_B_old or not A and not B and L_A_old and not L_B_old):
+		# this will be counter-clockwise rotation
 		counts = -1
 		#print 'Encoder count is %s' %counts
 		#print 'AB is %s %s' % (Encoder_A, Encoder_B)
@@ -83,7 +83,7 @@ def leftEncoder(term):
 	else:
 	#this will be an error
 		pos_errors += 1
-		print 'Error encoder left. Error count is %s' %pos_errors
+		print ('Error encoder left. Error count is ', pos_errors)
 		L_A_old = A
 		L_B_old = B
 		return
@@ -100,50 +100,50 @@ def leftEncoder(term):
 	pos_teta -= half_d_teta
 
 def rightEncoder(term):
-        counts = 0
-        global  R_B_old, R_A_old, pos_way, pos_x, pos_y, pos_teta, pos_errors
-        A = GPIO.input(pinRightA)  # stores the value of the encoders at time of interrupt
-        B = GPIO.input(pinRightB)
+	counts = 0
+	global  R_B_old, R_A_old, pos_way, pos_x, pos_y, pos_teta, pos_errors
+	A = GPIO.input(pinRightA)  # stores the value of the encoders at time of interrupt
+	B = GPIO.input(pinRightB)
 
-        if (not A and not B and not R_A_old and R_B_old or not A and B and R_A_old and R_B_old or A and B and R_A_old and not R_B_old or A and not B and not R_A_old and not R_B_old):
+	if (not A and not B and not R_A_old and R_B_old or not A and B and R_A_old and R_B_old or A and B and R_A_old and not R_B_old or A and not B and not R_A_old and not R_B_old):
 		#this will be counter-clockwise rotation
 		counts = -1
 		#print 'Encoder count is %s' %counts
 
 
 
-        elif (not A and B and not R_A_old and not R_B_old or A and B and not R_A_old and R_B_old or A and not B and R_A_old and R_B_old or not A and not B and R_A_old and not R_B_old):
+	elif (not A and B and not R_A_old and not R_B_old or A and B and not R_A_old and R_B_old or A and not B and R_A_old and R_B_old or not A and not B and R_A_old and not R_B_old):
 		# this will be clockwise rotation
-                counts = 1
+		counts = 1
 
 	else:
         #this will be an error
-                pos_errors += 1
-                print 'Error encoder Right. Error count is %s' %pos_errors
-                R_A_old = A
-                R_B_old = B
-                return
+		pos_errors += 1
+		print ('Error encoder Right. Error count is ' , pos_errors)
+		R_A_old = A
+		R_B_old = B
+		return
 
 
-        R_A_old = A     # store the current encoder values as old values to be used as comparison in the next loop
-        R_B_old = B
-
-        pos_way += math.fabs(counts) * dxRight/2.0
-        half_d_teta  = counts * math.atan(dxRight/2.0/wheels_width)
-        pos_teta += half_d_teta
-        pos_x += counts * dxRight*0.5*math.cos(pos_teta)
-        pos_y += counts * dxRight*0.5*math.sin(pos_teta)
-        pos_teta += half_d_teta
+	R_A_old = A     # store the current encoder values as old values to be used as comparison in the next loop
+	R_B_old = B
+	
+	pos_way += math.fabs(counts) * dxRight/2.0
+	half_d_teta  = counts * math.atan(dxRight/2.0/wheels_width)
+	pos_teta += half_d_teta
+	pos_x += counts * dxRight*0.5*math.cos(pos_teta)
+	pos_y += counts * dxRight*0.5*math.sin(pos_teta)
+	pos_teta += half_d_teta
 
 
 
 if __name__ == "__main__":
 	init()
 	i = 0
-	print "pos_x \t pos_Y \t pos_teta \t pos_way"
+	print ("pos_x \t pos_Y \t pos_teta \t pos_way")
 	while(i<100):
-		print pos_x, pos_y, pos_teta, pos_way
+		print (pos_x, pos_y, pos_teta, pos_way)
 		i += 1
-		time.sleep(0.1)
+		time.sleep(0.2)
 	GPIO.cleanup()
 
