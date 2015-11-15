@@ -49,6 +49,7 @@ def init():
 	except IOError:
 		# subprocess.call(['i2cdetect', '-y', '1'])
 		# flag = 1     #optional flag to signal your code to resend or something
+		pass
 
 #Test of the module
 if __name__ == "__main__":
