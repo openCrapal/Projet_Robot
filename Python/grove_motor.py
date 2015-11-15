@@ -1,11 +1,11 @@
-#!/usr/bin/python
+#!/usr/bin/python3.4
 
 import smbus
 import math
 import time
 
 # default adress of the grove motor controller
-motor_adress = 0x0f
+motor_adress = 28
 
 # registers
 set_freq = 0x84
@@ -31,22 +31,13 @@ def read_word_2c(adr):
         return val
 
 
-def save_offset():
-	i = 0
-	n = 100.0
-	sum = 0.0
-	while(i<n):
-		sum = sum + read_word_2c(0x47)
-		i = i + 1
-	sum = sum / n
-	print "offset_z: ", sum
-	return sum
 
 def init():
 	# to begin, set the pwm frequency
 	try:
 		bus.write_byte_data(motor_adress, set_freq, 2)
 	except IOError:
+		print(" Error connecting to device at the adress: ", motor_adress)
 		# subprocess.call(['i2cdetect', '-y', '1'])
 		# flag = 1     #optional flag to signal your code to resend or something
 		pass
