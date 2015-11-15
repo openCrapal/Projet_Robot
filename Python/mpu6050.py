@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3.4
 
 import smbus
 import math
@@ -11,20 +11,20 @@ power_mgmt_2 = 0x6c
 offset_z = 0.0
 
 def read_byte(adr):
-    return bus.read_byte_data(address, adr)
+	return bus.read_byte_data(address, adr)
 
 def read_word(adr):
-    high = bus.read_byte_data(address, adr)
-    low = bus.read_byte_data(address, adr+1)
-    val = (high << 8) + low
-    return val
+	high = bus.read_byte_data(address, adr)
+	low = bus.read_byte_data(address, adr+1)
+	val = (high << 8) + low
+	return val
 
 def read_word_2c(adr):
-    val = read_word(adr)
-    if (val >= 0x8000):
-        return -((65535 - val) + 1)
-    else:
-        return val
+	val = read_word(adr)
+	if (val >= 0x8000):
+		return -((65535 - val) + 1)
+	else:
+		return val
 
 
 def get_gyro_z():
@@ -39,7 +39,7 @@ def save_offset():
 		sum = sum + read_word_2c(0x47)
 		i = i + 1
 	sum = sum / n
-	print "offset_z: ", sum
+	print ("offset_z: ", sum)
 	return sum
 
 def init():
@@ -53,21 +53,18 @@ address = 0x68       # This is the address value read via the i2cdetect command
 # Test of the module
 if __name__ == "__main__":
 	init()
-	print "gyro data"
-	print "---------"
+	print ("gyro data")
 
 	gyro_xout = read_word_2c(0x43)
 	gyro_yout = read_word_2c(0x45)
 	#gyro_zout = read_word_2c(0x47)
 	gyro_zout = get_gyro_z()
 
-	print "gyro_xout: ", gyro_xout, " scaled: ", (gyro_xout / 131)
-	print "gyro_yout: ", gyro_yout, " scaled: ", (gyro_yout / 131)
-	print "gyro_zout: ", gyro_zout, " scaled: ", (gyro_zout / 131)
+	print ("gyro_xout: ", gyro_xout, " scaled: ", (gyro_xout / 131))
+	print ("gyro_yout: ", gyro_yout, " scaled: ", (gyro_yout / 131))
+	print ("gyro_zout: ", gyro_zout, " scaled: ", (gyro_zout / 131))
 
-	print
-	print "accelerometer data"
-	print "------------------"
+	print ("\n accelerometer data")
 
 	accel_xout = read_word_2c(0x3b)
 	accel_yout = read_word_2c(0x3d)
@@ -77,17 +74,17 @@ if __name__ == "__main__":
 	accel_yout_scaled = accel_yout / 16384.0
 	accel_zout_scaled = accel_zout / 16384.0
 
-	print "accel_xout: ", accel_xout, " scaled: ", accel_xout_scaled
-	print "accel_yout: ", accel_yout, " scaled: ", accel_yout_scaled
-	print "accel_zout: ", accel_zout, " scaled: ", accel_zout_scaled
+	print ("accel_xout: ", accel_xout, " scaled: ", accel_xout_scaled)
+	print ("accel_yout: ", accel_yout, " scaled: ", accel_yout_scaled)
+	print ("accel_zout: ", accel_zout, " scaled: ", accel_zout_scaled)
 
 	j = 0
 	sum = 0.0
 	while(j<10):
 		val = get_gyro_z()
 		
-		print "z centre :" , val
+		print ("z centre :" , val)
 		j = j + 1
 		sum += val
 	sum /= 10.0
-	print "moyenne : ", sum
+	print ("moyenne : ", sum)
