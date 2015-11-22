@@ -77,13 +77,13 @@ class Z_PID(Z_Filter):
 	# You want to control a position, a temperature, a force?
 	# This algorithm compares the value you want, the value from the capture (and their derivatives),
 	# and decide the adapted electrical voltage (or whaterver energy you use) for you actuator
-	def __init(self, kv, kp, tp, sat, Z_Goal, Z_Sensor = Z_Constant(0.0), Z_D_Goal = Z_Constant(0.), Z_D_Sensor = Z_Constant(0.)):
+	def __init__(self, kv, kp, tp, kd, sat, Z_Goal, Z_Sensor = Z_Constant(0.0), Z_D_Goal = Z_Constant(0.), Z_D_Sensor = Z_Constant(0.)):
 		try:	
 			if (not isinstance(Z_Goal, Z_Constant) and not isinstance(Z_Sensor, Z_Constant) and not isinstance(Z_D_Goal, Z_Constant) and not isinstance(Z_D_Sensor, Z_Constant)):
 				raise TypeError("Not a instance of Z_Constante")
 		except:
 			print("Invalid argument, objet of type Z_ required")
-		Z.Filter.__init__(self, Z_Goal)
+		Z_Filter.__init__(self, Z_Goal)
 		self._memorie = 0.0
 		self._ecart_old = 0.0
 		self._Sensor = Z_Sensor
@@ -91,6 +91,7 @@ class Z_PID(Z_Filter):
 		self._D_Goal = Z_D_Goal
 		self._kv = kv
 		self._kp = kp
+		self._kd = kd
 		if not tp > 0:
 			self._tp = 1.0
 		else:
@@ -122,10 +123,11 @@ if __name__ == "__main__":
 	Zero = Z_Constant(0)
 	Filtre = Z_Filter(Zero, 0.2)
 	Deriv = Z_Derivative(Filtre)
+	pid = Z_PID (10, 15, 10, 12, 100, Zero, Filtre, Deriv, Zero)
 	for i in range(1, 200, 1):
 		Z_Index += 1
 		ang = math.sin(i/10)
 		Zero.set_val(ang)
-		print ("val: ", Zero.get_val(), "\t filtre: ", Filtre.get_val(), " \t Derivee: ", Deriv.get_val())
+		print ("val: ", Zero.get_val(), "\t filtre: ", Filtre.get_val(), " \t Derivee: ", Deriv.get_val(), "\t  pid: ", pid.get_val())
 		time.sleep(0.01)
 		
