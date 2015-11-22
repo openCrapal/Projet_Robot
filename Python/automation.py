@@ -18,7 +18,6 @@ class Z_Constant:
 		# print ("Z_Constante._update")
 		pass
 
-
 	def get_val(self):
 		global Z_Index
 		if (self._local_index < Z_Index):
@@ -31,6 +30,15 @@ class Z_Constant:
 	def set_val(self, n_val):
 		self._valeur = n_val
 
+class Z_Sensor(Z_Constant):
+	# use this class when you've got you pick up a value from a function or an application
+	def __init__(self, get_sensor):
+		Z_Constant.__init__(self, 0.0 )
+		self._ref_get_sensor = get_sensor
+
+	def _update(self):
+		self._valeur = self._ref_get_sensor()
+		print("update sensor")
 
 class Z_Filter(Z_Constant):
 	# useful to get a better reading from a noisy sensor. Band_pass argument is a time in secondes. Choose wisely
@@ -57,7 +65,7 @@ class Z_Filter(Z_Constant):
 		val = self._Z_Item.get_val()
 		t = time.time()
 		#print ("Z_filter.update, val: ", val )
-		self._memorie += val * ( t - self._timer0) / self._t_cut
+		self._memorie = (self._memorie + val * ( t - self._timer0) / self._t_cut) / ( 1 + ( t - self._timer0 ) / self._t_cut)
 		self._valeur = self._memorie
 
 
@@ -93,15 +101,16 @@ class Z_PID(Z_Filter):
 		self._kp = kp
 		self._kd = kd
 		if not tp > 0:
-			self._tp = 1.0
+			self._tp = 1000.0
 		else:
 			self._tp = tp
 		if not sat > 0:
-			self._sat = 1.0
+			self._sat = 50.0
 		else:
 			self._sat = sat
 
 	def update(self):
+		print("PID update")
 		dt = time.time() - self._timer0
 		ecart = self._kv * (self._Z_Item.get_val() - self._Sensor.get_val())
 		ecart += self._D_Goal.get_val() - self._D_Sensor.get_val()
@@ -124,10 +133,11 @@ if __name__ == "__main__":
 	Filtre = Z_Filter(Zero, 0.2)
 	Deriv = Z_Derivative(Filtre)
 	pid = Z_PID (10, 15, 10, 12, 100, Zero, Filtre, Deriv, Zero)
+	sensor = Z_Sensor(Deriv.get_val)
 	for i in range(1, 200, 1):
 		Z_Index += 1
 		ang = math.sin(i/10)
 		Zero.set_val(ang)
-		print ("val: ", Zero.get_val(), "\t filtre: ", Filtre.get_val(), " \t Derivee: ", Deriv.get_val(), "\t  pid: ", pid.get_val())
+		print ("val: ", Zero.get_val(), "\t filtre: ", Filtre.get_val(), " \t Derivee: ", Deriv.get_val(), "\t  pid: ", pid.get_val(), " \t sensor: ", sensor.get_val())
 		time.sleep(0.01)
 		

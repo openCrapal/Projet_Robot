@@ -167,7 +167,6 @@ if __name__ == "__main__":
 
 	signal.signal(signal.SIGINT, fermer_pgrm)
 
-#	init()
 	i = 0
 	print ("pos_x \t pos_Y \t pos_teta \t pos_way")
 	while(i<100):
