@@ -24,8 +24,8 @@ GPIO.setup(PWM2,  GPIO.OUT)
 
 GPIO.output(DIR1, 0)
 GPIO.output(DIR2, 0)
-p1 = GPIO.PWM(PWM1, 500)
-p2 = GPIO.PWM(PWM2, 500)
+p1 = GPIO.PWM(PWM1, 200)
+p2 = GPIO.PWM(PWM2, 200)
 p1.start(0)
 p2.start(0)
 

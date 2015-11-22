@@ -113,8 +113,8 @@ class Z_PID(Z_Filter):
 		dt = time.time() - self._timer0
 		ecart = self._kv * (self._Z_Item.get_val() - self._Sensor.get_val())
 		ecart += self._D_Goal.get_val() - self._D_Sensor.get_val()
-		self._memorie += ecart * dt / self._tp
-		self._valeur = ecart + self._memorie * self._kp + (ecart - self._ecart_old) * self._kd / dt
+		self._memorie =+ ecart * dt / self._tp
+		self._valeur = ecart * self._kp + self._memorie + (ecart - self._ecart_old) * self._kd / dt
 		self._ecart_old = ecart
 		
 		# Intelligent saturation : the Integral part (memorie) doesn't keep uselessly growing
