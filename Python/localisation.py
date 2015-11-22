@@ -3,7 +3,7 @@
 
 import RPi.GPIO as GPIO
 import math
-import time
+from time import time, sleep
 
 pinLeftA = 14
 pinLeftB = 15
@@ -17,10 +17,13 @@ L_B_old= 0
 
 pos_x = 0.0
 pos_y = 0.0
-pos_teta = 0.0  #orientation in rads
-pos_way = 0.0   #absolute distance the car went throught
+pos_teta = 0.0    #orientation in rads
+pos_speed = 0.0   #axial speed
 
 pos_errors = 0
+count_l = 0
+count_r = 0
+timer = time()
 
 # physical dimentions of the car
 dxLeft = 0.042*3.141/48
@@ -41,23 +44,21 @@ L_B_old = GPIO.input(pinLeftB)
 R_A_old= GPIO.input(pinRightA)
 R_B_old= GPIO.input(pinRightB)
 
-print("l A: ", L_A_old, "\t l B: ", L_B_old, "\t r A: ", R_A_old, "\t r B: ", R_B_old)
-
 # Define encoder count function
 def leftEncoder(term):
-	counts = 0
-	global  L_B_old, L_A_old, pos_way, pos_x, pos_y, pos_teta, pos_errors
+	global L_B_old, L_A_old, pos_errors, count_l
+	
 	A = GPIO.input(pinLeftA)  # stores the value of the encoders at time of interrupt
 	B = GPIO.input(pinLeftB)
 
 	if (not A and not B and not L_A_old and L_B_old or not A and B and L_A_old and L_B_old or A and B and L_A_old and not L_B_old or A and not B and not L_A_old and not L_B_old):
 		# this will be clockwise rotation
-		counts = 1
+		count_l += 1
 
 
 	elif (not A and B and not L_A_old and not L_B_old or A and B and not L_A_old and L_B_old or A and not B and L_A_old and L_B_old or not A and not B and L_A_old and not L_B_old):
 		# this will be counter-clockwise rotation
-		counts = -1
+		count_l -= 1
 		#print 'Encoder count is %s' %counts
 		#print 'AB is %s %s' % (Encoder_A, Encoder_B)
 
@@ -65,58 +66,50 @@ def leftEncoder(term):
 	else:
 	#this will be an error
 		pos_errors += 1
-		print ('Error encoder left. Error count is ', pos_errors)
-		L_A_old = A
-		L_B_old = B
-		return
-
-
-	L_A_old = A     # store the current encoder values as old values to be used as comparison in the next loop
-	L_B_old = B
 	
-	pos_way += math.fabs(counts) * dxLeft/2.0
-	half_d_teta  = counts * math.atan(dxLeft/2.0/wheels_width)
-	pos_teta -= half_d_teta
-	pos_x += counts * dxLeft*0.5*math.cos(pos_teta)
-	pos_y += counts * dxLeft*0.5*math.sin(pos_teta)
-	pos_teta -= half_d_teta
+	L_A_old = A
+	L_B_old = B # store the current encoder values as old values to be used as comparison in the next loop
+	
 
 def rightEncoder(term):
-	counts = 0
-	global  R_B_old, R_A_old, pos_way, pos_x, pos_y, pos_teta, pos_errors
+	global  R_B_old, R_A_old, pos_errors, count_r
 	A = GPIO.input(pinRightA)  # stores the value of the encoders at time of interrupt
 	B = GPIO.input(pinRightB)
 
 	if (not A and not B and not R_A_old and R_B_old or not A and B and R_A_old and R_B_old or A and B and R_A_old and not R_B_old or A and not B and not R_A_old and not R_B_old):
 		#this will be counter-clockwise rotation
-		counts = -1
+		count_r -= 1
 		#print 'Encoder count is %s' %counts
-
 
 
 	elif (not A and B and not R_A_old and not R_B_old or A and B and not R_A_old and R_B_old or A and not B and R_A_old and R_B_old or not A and not B and R_A_old and not R_B_old):
 		# this will be clockwise rotation
-		counts = 1
+		count_r += 1
 
 	else:
         #this will be an error
 		pos_errors += 1
-		print ('Error encoder Right. Error count is ' , pos_errors)
-		R_A_old = A
-		R_B_old = B
-		return
-
-
-	R_A_old = A     # store the current encoder values as old values to be used as comparison in the next loop
+	
+	R_A_old = A
 	R_B_old = B
 	
-	pos_way += math.fabs(counts) * dxRight/2.0
-	half_d_teta  = counts * math.atan(dxRight/2.0/wheels_width)
-	pos_teta += half_d_teta
-	pos_x += counts * dxRight*0.5*math.cos(pos_teta)
-	pos_y += counts * dxRight*0.5*math.sin(pos_teta)
-	pos_teta += half_d_teta
 
+def update():
+	global timer
+	t = time()
+	if (t - timer < 0.001):
+			return
+
+	global pos_x, pos_y, pos_teta, pos_speed, count_l, count_r
+	d_way = (count_l * dxLeft + count_r * dxRight) / 2.0
+	pos_speed = d_way / ( t - timer )
+	half_d_teta  = count_l * math.atan(dxLeft/2.0/wheels_width) - count_r * math.atan(dxRight/2.0/wheels_width)
+	pos_teta -= half_d_teta
+	pos_x += d_way * math.cos(pos_teta)
+	pos_y += d_way * math.sin(pos_teta)
+	pos_teta -= half_d_teta
+	timer = t
+	count_l = count_r = 0
 
 # Initialize the interrupts - these trigger on the both the rising and falling 
 done = False
@@ -168,9 +161,10 @@ if __name__ == "__main__":
 	signal.signal(signal.SIGINT, fermer_pgrm)
 
 	i = 0
-	print ("pos_x \t pos_Y \t pos_teta \t pos_way")
+	print ("pos_x \t pos_Y \t pos_teta \t pos_speed")
 	while(i<100):
-		print (pos_x, pos_y, pos_teta, pos_way)
+		update()
+		print (pos_x, pos_y, pos_teta, pos_speed)
 		i += 1
-		time.sleep(0.2)
+		sleep(0.2)
 
