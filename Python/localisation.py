@@ -93,6 +93,19 @@ def rightEncoder(term):
 	R_A_old = A
 	R_B_old = B
 	
+def get_teta():
+	# update()
+	return (pos_teta)
+
+def get_speed():
+	return (pos_speed)
+
+def get_x():
+	return pos_x
+
+def get_y():
+	return pos_y
+
 
 def update():
 	global timer
