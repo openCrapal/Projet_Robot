@@ -27,40 +27,21 @@ dxLeft = 0.042*3.141/48
 dxRight= 0.042*3.141/48
 wheels_width = 0.128   # distance beetwin wheels
 
-GPIO.setmode(GPIO.BCM) #use hardware pin numbers
+#GPIO.cleanup()
+GPIO.setmode(GPIO.BCM) # use hardware pin numbers
+GPIO.setwarnings(True)
 
+GPIO.setup(pinLeftA,  GPIO.IN, pull_up_down=GPIO.PUD_UP)  
+GPIO.setup(pinLeftB,  GPIO.IN, pull_up_down=GPIO.PUD_UP)  
+GPIO.setup(pinRightA, GPIO.IN, pull_up_down=GPIO.PUD_UP)  
+GPIO.setup(pinRightB, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# As the localisation begins,this  module should be initialised
-def init():
-	global pinLeftA,  pinLeftB, pinRightA, pinRightB
-	global EncoderLeftA_old, EncoderLeftB_old, EncoderRightA_old, EncoderRightB_old
+L_A_old = GPIO.input(pinLeftA)
+L_B_old = GPIO.input(pinLeftB)
+R_A_old= GPIO.input(pinRightA)
+R_B_old= GPIO.input(pinRightB)
 
-	pos_x = 0.0
-	pos_y = 0.0
-	pos_teta = 0.0
-
-	GPIO.setwarnings(True)       
-
-	GPIO.setup(pinLeftA,  GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  
-	GPIO.setup(pinLeftB,  GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  
-	GPIO.setup(pinRightA, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)  
-	GPIO.setup(pinRightB, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-
-	L_A_old = GPIO.input(pinLeftA)
-	L_B_old = GPIO.input(pinLeftB)
-	R_A_old= GPIO.input(pinRightA)
-	R_B_old= GPIO.input(pinRightB)
-	
-	pos_x = 0.0
-	pos_y = 0.0
-	pos_teta = 0.0
-	
-	# Initialize the interrupts - these trigger on the both the rising and falling 
-	GPIO.add_event_detect(pinLeftA, GPIO.BOTH, callback = leftEncoder)   # Encoder A
-	GPIO.add_event_detect(pinLeftB, GPIO.BOTH, callback = leftEncoder)   # Encoder B
-	GPIO.add_event_detect(pinRightA, GPIO.BOTH, callback = rightEncoder)   # Encoder A
-	GPIO.add_event_detect(pinRightB, GPIO.BOTH, callback = rightEncoder)   # Encoder B
-
+print("l A: ", L_A_old, "\t l B: ", L_B_old, "\t r A: ", R_A_old, "\t r B: ", R_B_old)
 
 # Define encoder count function
 def leftEncoder(term):
@@ -137,14 +118,60 @@ def rightEncoder(term):
 	pos_teta += half_d_teta
 
 
+# Initialize the interrupts - these trigger on the both the rising and falling 
+done = False
+while (not done):
+	try:
+		GPIO.add_event_detect(pinRightA, GPIO.BOTH, callback = rightEncoder)   # Encoder A
+	except:
+		pass
+	else:
+		done = True
+
+done = False
+while (not done):
+	try:
+		GPIO.add_event_detect(pinRightB, GPIO.BOTH, callback = rightEncoder)   # Encoder B
+	except:
+		pass
+	else:
+		done = True
+
+done = False
+while (not done):
+	try:
+		GPIO.add_event_detect(pinLeftA, GPIO.BOTH, callback = leftEncoder)   # Encoder A
+	except:
+		pass
+	else:
+		done = True
+
+done = False
+while (not done):
+	try:
+		GPIO.add_event_detect(pinLeftB, GPIO.BOTH, callback = leftEncoder)   # Encoder B
+	except:
+		pass
+	else:
+		done = True
+
 
 if __name__ == "__main__":
-	init()
+	import sys
+	import signal
+
+	def fermer_pgrm(signal, frame):
+		print("fermer proprement")
+		GPIO.cleanup()
+		sys.exit(0)
+
+	signal.signal(signal.SIGINT, fermer_pgrm)
+
+#	init()
 	i = 0
 	print ("pos_x \t pos_Y \t pos_teta \t pos_way")
 	while(i<100):
 		print (pos_x, pos_y, pos_teta, pos_way)
 		i += 1
 		time.sleep(0.2)
-	GPIO.cleanup()
 
