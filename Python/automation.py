@@ -38,7 +38,7 @@ class Z_Sensor(Z_Constant):
 
 	def _update(self):
 		self._valeur = self._ref_get_sensor()
-		print("update sensor")
+		#print("update sensor")
 
 class Z_Filter(Z_Constant):
 	# useful to get a better reading from a noisy sensor. Band_pass argument is a time in secondes. Choose wisely
@@ -124,7 +124,7 @@ class Z_PID(Z_Filter):
 		elif self._valeur < -self._sat:
 			self._valeur = - self._sat
 			self._memorie = - self._sat - self._kp * ecart
-		print("pid , dt: ", dt, "|t ecart :", ecart, "\t valeur :", self._valeur)
+		#print("pid , dt: ", dt, "|t ecart :", ecart, "\t valeur :", self._valeur)
 		
 #test du module
 if __name__ == "__main__":

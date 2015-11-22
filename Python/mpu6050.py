@@ -15,7 +15,8 @@ bus = smbus.SMBus(1) # or bus = smbus.SMBus(1) for Revision 2 boards
 address = 0x68       # This is the address value read via the i2cdetect command
 
 
-offset_z = 0.0
+offset_z = 0
+val_old = 0
 
 def read_byte(adr):
 	return bus.read_byte_data(address, adr)
@@ -35,7 +36,15 @@ def read_word_2c(adr):
 
 
 def get_gyro_z():
-	return (read_word_2c(0x47) - offset_z)
+	global val_old
+	try:
+		v = read_word_2c(0x47)
+	except:
+		v = val_old
+	else:
+		val_old = v
+	finally:
+		return v - offset_z
 
 
 def save_offset():
