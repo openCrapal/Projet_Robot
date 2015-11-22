@@ -10,10 +10,10 @@ import automation as Z
 import sys
 import signal
 
-kva = 10.0
-kpa = 100.0
-tpa = 1000.0
-kda = 1.0
+kva = 01.0
+kpa = 1000
+tpa = 100000.0
+kda = 0.0
 sata= 20.0
 
 def fermer_pgrm(signal, frame):
@@ -29,11 +29,13 @@ Goal = Z.Z_Constant(10.0)
 
 Motor =  Z.Z_PID(kva, kpa, tpa, kda, sata, Goal, Gyro)
 
-for i in range(1, 1000, 1):
-	print(Gyro.get_val(), "\t", mpu6050.get_gyro_z(), "\t", Motor.get_val())
+for i in range(1, 100, 1):
+	print(Gyro.get_val(), "\t", Goal.get_val(), "\t", Motor.get_val())
 	
 	pwmMotors.set_speed(Motor.get_val(), Motor.get_val())
 	time.sleep(0.02)
 	Z.Z_Index += 1
 
+import RPi.GPIO as GPIO
+GPIO.cleanup()
 

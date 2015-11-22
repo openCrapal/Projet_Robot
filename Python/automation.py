@@ -109,8 +109,7 @@ class Z_PID(Z_Filter):
 		else:
 			self._sat = sat
 
-	def update(self):
-		print("PID update")
+	def _update(self):
 		dt = time.time() - self._timer0
 		ecart = self._kv * (self._Z_Item.get_val() - self._Sensor.get_val())
 		ecart += self._D_Goal.get_val() - self._D_Sensor.get_val()
@@ -121,18 +120,19 @@ class Z_PID(Z_Filter):
 		# Intelligent saturation : the Integral part (memorie) doesn't keep uselessly growing
 		if self._valeur > self._sat:
 			self._valeur = self._sat
-			self._memorie = self.sat - ecart * self._kp
+			self._memorie = self._sat - ecart * self._kp
 		elif self._valeur < -self._sat:
 			self._valeur = - self._sat
 			self._memorie = - self._sat - self._kp * ecart
-
+		print("pid , dt: ", dt, "|t ecart :", ecart, "\t valeur :", self._valeur)
 		
 #test du module
 if __name__ == "__main__":
 	Zero = Z_Constant(0)
+	Un = Z_Constant(0.0)
 	Filtre = Z_Filter(Zero, 0.2)
 	Deriv = Z_Derivative(Filtre)
-	pid = Z_PID (10, 15, 10, 12, 100, Zero, Filtre, Deriv, Zero)
+	pid = Z_PID (10, 15, 10, 12, 100, Un, Filtre, Deriv, Zero)
 	sensor = Z_Sensor(Deriv.get_val)
 	for i in range(1, 200, 1):
 		Z_Index += 1
