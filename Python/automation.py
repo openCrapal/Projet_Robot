@@ -87,7 +87,7 @@ class Z_PID(Z_Filter):
 	# You want to control a position, a temperature, a force?
 	# This algorithm compares the value you want, the value from the capture (and their derivatives),
 	# and decide the adapted electrical voltage (or whaterver energy you use) for you actuator
-	def __init__(self, kv, kp, tp, kd, sat, Z_Goal, Z_Sensor = Z_Constant(0.0), Z_D_Goal = Z_Constant(0.), Z_D_Sensor = Z_Constant(0.)):
+	def __init__(self, kv, kp, tp, kd, sat, Z_Goal, Z_Sensor = Z_Constant(0.0), Z_D_Goal = Z_Constant(0.), Z_D_Sensor = Z_Constant(0.), Ampl = Z_Ampli):
 		try:	
 			if (not isinstance(Z_Goal, Z_Constant) and not isinstance(Z_Sensor, Z_Constant) and not isinstance(Z_D_Goal, Z_Constant) and not isinstance(Z_D_Sensor, Z_Constant)):
 				raise TypeError("Not a instance of Z_Constante")
@@ -102,6 +102,10 @@ class Z_PID(Z_Filter):
 		self._kv = kv
 		self._kp = kp
 		self._kd = kd
+		if not not Ampl == 0:
+			self._Ampl = 1.0
+		else:
+			self._Ampl = Ampl
 		if not tp > 0:
 			self._tp = 1000.0
 		else:
@@ -119,14 +123,14 @@ class Z_PID(Z_Filter):
 		self._valeur = ecart * self._kp + self._memorie + (ecart - self._ecart_old) * self._kd / dt
 		self._ecart_old = ecart
 		
-		self._valeur /= Z_Ampli
+		self._valeur /= self._Ampl
 		# Intelligent saturation : the Integral part (memorie) doesn't keep uselessly growing
 		if self._valeur > self._sat:
 			self._valeur = self._sat
-			self._memorie = (self._sat - ecart * self._kp) * Z_Ampli 
+			self._memorie = (self._sat - ecart * self._kp) * self._Ampl 
 		elif self._valeur < -self._sat:
 			self._valeur = - self._sat
-			self._memorie = (- self._sat - self._kp * ecart) * Z_Ampli
+			self._memorie = (- self._sat - self._kp * ecart) * self._Ampl
 		#print("pid , dt: ", dt, "|t ecart :", ecart, "\t valeur :", self._valeur)
 		
 #test du module
