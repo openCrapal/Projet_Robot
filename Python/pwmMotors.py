@@ -15,7 +15,7 @@ DIR2 = 17  # Left, obviously
 PWM2 = 4
 
 GPIO.setmode(GPIO.BCM) #use hardware pin numbers
-
+GPIO.setwarnings(False)
 
 GPIO.setup(DIR1,  GPIO.OUT)
 GPIO.setup(PWM1,  GPIO.OUT)

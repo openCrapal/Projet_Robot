@@ -32,7 +32,7 @@ wheels_width = 0.128   # distance beetwin wheels
 class Encoder():
 
 	def changeA(self, term):
-		newA = self.INPUT(self.pinA)
+		newA = GPIO.input(self.pinA)
 		if self.A == newA:
 			self.erreur +=1
 		elif newA:  # rising edge on A
@@ -48,7 +48,7 @@ class Encoder():
 		self.A = newA
 
 	def changeB(self, term):
-		newB = self.INPUT(self.pinB)
+		newB = GPIO.input(self.pinB)
 		if newB == self.B:
 			self.erreur += 1
 		elif newB:  # rising edge on B
@@ -63,16 +63,8 @@ class Encoder():
 				self.count += 1
 		self.B = newB
 
-	def fallB(self, term):
-		if self.A:
-			self.count -= 1
-		else:
-			self.count += 1
-		self.B = False
-
 
 	def __init__(self, pinA, pinB):
-		self.INPUT = GPIO.input
 		self.pinA = pinA
 		self.pinB = pinB
 		self.count = 0
@@ -126,11 +118,12 @@ def get_y():
 # only done when the user need it
 # if you don't call it often enought, you might have some big localisation errors
 def update():
+	GPIO.setmode(GPIO.BCM)
 	global timer
 	t = time()
 	global pos_x, pos_y, pos_teta, pos_speed
 	count_l = Enc_Left.get_count()
-	count_r = Enc_Right.get_count()
+	count_r = - Enc_Right.get_count()
 	d_way = (count_l * dxLeft + count_r * dxRight) / 2.0
 	pos_speed = d_way / ( t - timer )
 	half_d_teta  = count_l * math.atan(dxLeft/2.0/wheels_width) - count_r * math.atan(dxRight/2.0/wheels_width)

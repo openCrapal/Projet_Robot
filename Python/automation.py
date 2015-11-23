@@ -6,6 +6,8 @@ import time
 import subprocess
 
 Z_Index = 0 # This integer must be incremented for each calculation cycle
+Z_Ampli = 12.0 # Change this value when you change you power source, instead
+               # of changing each of the PID constants
 
 class Z_Constant:
 	def __init__(self, valeur_init = 0.0):
@@ -117,13 +119,14 @@ class Z_PID(Z_Filter):
 		self._valeur = ecart * self._kp + self._memorie + (ecart - self._ecart_old) * self._kd / dt
 		self._ecart_old = ecart
 		
+		self._valeur /= Z_Ampli
 		# Intelligent saturation : the Integral part (memorie) doesn't keep uselessly growing
 		if self._valeur > self._sat:
 			self._valeur = self._sat
-			self._memorie = self._sat - ecart * self._kp
+			self._memorie = (self._sat - ecart * self._kp) * Z_Ampli 
 		elif self._valeur < -self._sat:
 			self._valeur = - self._sat
-			self._memorie = - self._sat - self._kp * ecart
+			self._memorie = (- self._sat - self._kp * ecart) * Z_Ampli
 		#print("pid , dt: ", dt, "|t ecart :", ecart, "\t valeur :", self._valeur)
 		
 #test du module

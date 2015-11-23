@@ -10,19 +10,29 @@ import automation as Z
 import sys
 import signal
 
-# PID inclinaison
-kva = 0.0  #  25
-kpa = 0.01 #  0.01
-tpa = 1000000.1   #  0.2
-kda = 0.0000 # 0.00001
-sata= 50.0   # 100
+# I use a 12 V alim for the motors. I set Z_Ampli to 12
+# When I swich to 6V, just have to set Z_Ampli to 6
+# Well, if your system is linear, and the saturator clairly isn't
+Z.Z_Ampli = 12
+
+# PID inclinaison, the value proposed are are the robust ones (half the limit ones) by 12V
+kva = 0.1  #  0.1
+kpa = 0.4  #  0.4
+tpa = 0.3   #  0.3
+kda = 0.005 # 0.005
+sata= 100.0   # 100
+t_filter_a = 0.8
 
 # PID orientation
 kvo = 0.5
 kpo = 50 # 50
 tpo = 0.0001   #  0.0001
 kdo = 0.00# 0.00001
-sato= 30.0
+sato= 0.0
+
+# loop time, seconds. Must be more than the actual time it takes to free CPU use for other process
+loop_time = 0.04
+t_begin_program = time.time()
 
 def fermer_pgrm(signal, frame):
 	print("fermer proprement")
@@ -45,7 +55,8 @@ D_Teta_Goal = Z.Z_Filter(Z.Z_Derivative(Teta_Goal), 0.5)
 Dir   = Z.Z_PID(kvo, kpo, tpo, kdo, sato, Teta_Goal, Orientation, D_Teta_Goal, D_Orientation)
 Motor = Z.Z_PID(kva, kpa, tpa, kda, sata, Goal, Gyro, D_Goal, D_Gyro)
 
-for i in range(1, 1000, 1):
+while (time.time() - t_begin_program <  10):
+	t_begin_loop = time.time()
 	loc.update()
 	Teta_Goal.set_val( 0.)
 	#print(Gyro.get_val(), "\t", Goal.get_val(), "\t", Motor.get_val())
@@ -54,6 +65,7 @@ for i in range(1, 1000, 1):
 	pwmMotors.set_speed(m-d,m+d)
 	#time.sleep(0.01)
 	Z.Z_Index += 1
+	time.sleep(loop_time + t_begin_loop - time.time())
 
 import RPi.GPIO as GPIO
 GPIO.cleanup()
