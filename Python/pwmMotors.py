@@ -8,6 +8,10 @@ import RPi.GPIO as GPIO
 import math
 import time
 
+pwmAmpli = 12.0 # Change this value when you change you power source, instead
+               # of changing each of the PID constants
+
+
 # Pins I use on my RPy rev2 model B
 DIR1 = 22  # Right
 PWM1 = 27
@@ -30,6 +34,8 @@ p1.start(0)
 p2.start(0)
 
 def set_speed(v1, v2):
+	v1/=pwmAmpli
+	v2/=pwmAmpli
 	dir1 = 0
 	if v1>=0:
 		if v1>=100:
