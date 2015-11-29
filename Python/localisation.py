@@ -20,6 +20,7 @@ pos_x = 0.0
 pos_y = 0.0
 pos_teta = 0.0    #orientation in rads
 pos_speed = 0.0   #axial speed
+pos_way = 0.0
 
 pos_errors = 0
 timer = time()
@@ -109,22 +110,26 @@ def get_speed():
 	return (pos_speed)
 
 def get_x():
-	return pos_x
+	return(pos_x)
 
 def get_y():
-	return pos_y
+	return(pos_y)
+
+def get_way():
+	return(pos_way)
 
 # To save time during interruptions, the "complex" trigonometric calculation is
-# only done when the user need it
+# done only when the user need it
 # if you don't call it often enought, you might have some big localisation errors
 def update():
 	GPIO.setmode(GPIO.BCM)
 	global timer
 	t = time()
-	global pos_x, pos_y, pos_teta, pos_speed
+	global pos_x, pos_y, pos_teta, pos_speed, pos_way
 	count_l = Enc_Left.get_count()
 	count_r = - Enc_Right.get_count()
 	d_way = (count_l * dxLeft + count_r * dxRight) / 2.0
+	pos_way += d_way
 	pos_speed = d_way / ( t - timer )
 	half_d_teta  = count_l * math.atan(dxLeft/2.0/wheels_width) - count_r * math.atan(dxRight/2.0/wheels_width)
 	pos_teta -= half_d_teta

@@ -49,7 +49,7 @@ class Z_Sum(Z_Constant):
 		self._f2 = factor2
 
 	def _update(self):
-		self.valeur = self._f1 * self._Item1.get_val() + self._f2 * self.Item2.get_val()
+		self._valeur = self._f1 * self._Item1.get_val() + self._f2 * self._Item2.get_val()
 
 class Z_Filter(Z_Constant):
 	# useful to get a better reading from a noisy sensor. Band_pass argument is a time in secondes. Choose wisely
@@ -62,22 +62,23 @@ class Z_Filter(Z_Constant):
 			print("Invalid argument, objet of type Z_ required")
 		self._Z_Item = Z_item  # reference to an objet wich inherits from Z_Constant
 		self._memorie = 0.0
-		try:
-			if band_pass > 0:
-				self._t_cut = band_pass
-			else:
-				raise ValueError("Filter band_pass time must be > 0")
-		except:
-			print("Invalid argument, positive band_pass value")
-
-
+		self._t_cut = band_pass
+		
 	def _update(self):
+		if self._t_cut == 0:
+			self._valeur = self._Z_Item.get_val()
+			return
 		 # first order linear filter
 		val = self._Z_Item.get_val()
 		t = time.time()
 		#print ("Z_filter.update, val: ", val )
 		self._memorie = (self._memorie + val * ( t - self._timer0) / self._t_cut) / ( 1 + ( t - self._timer0 ) / self._t_cut)
 		self._valeur = self._memorie
+
+class Z_Gain(Z_Filter):
+	def _update(self):
+		self._valeur = self._t_cut * self._Z_Item.get_val()
+
 
 class Z_HighPassFilter(Z_Filter):
 	def _update(self):
@@ -94,6 +95,16 @@ class Z_Derivative(Z_Filter):
 	def _update(self):
 		self._valeur = (self._Z_Item.get_val() - self._memorie) / ( time.time() - self._timer0)
 		self._memorie = self._Z_Item.get_val()
+
+
+class Z_Integral(Z_Filter):
+	def _update(self):
+		dt = time.time() - self._timer0
+		self._valeur += self._Z_Item.get_val() * dt
+		if self._t_cut > 0:
+			self._valeur = self._valeur *  self._t_cut / ( self._t_cut + dt)
+
+		
 
 class Z_PID(Z_Filter):
 	# Once you've use a PID controller, it all seems fairly natural. Otherways, it's kind of complicated
@@ -121,8 +132,6 @@ class Z_PID(Z_Filter):
 			self._tp = 1000.0
 		else:
 			self._tp = tp
-		from pwmMotors import pwmAmpli
-		sat *= pwmAmpli
 		if not sat > 0:
 			self._sat = 50.0
 		else:
@@ -130,8 +139,8 @@ class Z_PID(Z_Filter):
 
 	def _update(self):
 		dt = time.time() - self._timer0
-		ecart = self._kv * (self._Z_Item.get_val() - self._Sensor.get_val())
-		ecart += self._D_Goal.get_val() - self._D_Sensor.get_val()
+		ecart =  self._kv *  (self._Z_Item.get_val() - self._Sensor.get_val())
+		ecart += (self._D_Goal.get_val() - self._D_Sensor.get_val())
 		self._memorie =+ ecart * dt / self._tp
 		self._valeur = ecart * self._kp + self._memorie + (ecart - self._ecart_old) * self._kd / dt
 		self._ecart_old = ecart
@@ -139,10 +148,10 @@ class Z_PID(Z_Filter):
 		# Intelligent saturation : the Integral part (memorie) doesn't keep uselessly growing
 		if self._valeur > self._sat:
 			self._valeur = self._sat
-			self._memorie = (self._sat - ecart * self._kp) 
-		elif self._valeur < -self._sat:
+			self._memorie = self._sat 
+		if self._valeur < -self._sat:
 			self._valeur = - self._sat
-			self._memorie = (- self._sat - self._kp * ecart)
+			self._memorie =- self._sat
 		#print("pid , dt: ", dt, "|t ecart :", ecart, "\t valeur :", self._valeur)
 		
 #test du module
@@ -152,11 +161,12 @@ if __name__ == "__main__":
 	Filtre = Z_Filter(Zero, 0.2)
 	Deriv = Z_Derivative(Filtre)
 	pid = Z_PID (10, 15, 10, 12, 100, Un, Filtre, Deriv, Zero)
+	somme = Z_Sum(pid, Deriv)
 	sensor = Z_Sensor(Deriv.get_val)
 	for i in range(1, 200, 1):
 		Z_Index += 1
 		ang = math.sin(i/10)
 		Zero.set_val(ang)
-		print ("val: ", Zero.get_val(), "\t filtre: ", Filtre.get_val(), " \t Derivee: ", Deriv.get_val(), "\t  pid: ", pid.get_val(), " \t sensor: ", sensor.get_val())
+		print ("val: ", Zero.get_val(), "\t filtre: ", Filtre.get_val(), " \t Derivee: ", Deriv.get_val(), "\t  pid: ", pid.get_val(), " \t somme: ", somme.get_val())
 		time.sleep(0.01)
 		
