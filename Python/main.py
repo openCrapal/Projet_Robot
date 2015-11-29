@@ -10,13 +10,6 @@ import automation as Z
 import sys
 import signal
 
-# I use a 12 V alim for the motors. I set Z_Ampli to 12
-# When I swich to 6V, just have to set Z_Ampli to 6
-# Well, if your system is linear, and the saturator clairly isn't
-Ampli = 12.0
-# position of the weightPoint
-radius_G = 0.17
-
 edit_file = False
 if edit_file:
 	import os
@@ -25,6 +18,12 @@ if edit_file:
 	my_file = open(time.strftime("%B_%d_%H_%M_%S"), 'w')
 	my_file.write("time(s)\tmpu6050(rad/s/s\tmotors(% @ {0}V) \n".format(pwmMotors.pwmAmpli))
 
+# I use a 12 V alim for the motors. I set Z_Ampli to 12
+# When I swich to 6V, just have to set Z_Ampli to 6
+# Well, if your system is linear, and the saturator clairly isn't
+Ampli = 12.0
+# position of the weightPoint
+radius_G = 0.2
 
 # PI inclinaison, the value proposed are are the robust ones (half the limit ones) by 12V
 kpa = 50.     #55
@@ -42,11 +41,12 @@ sato= 0
 t_filter_o = 0.1
 
 # PID position
-kvw = 2.0
-kpw = 5.0
-tpw = .001
+kvw = 0.1
+kpw = 1.0
+tpw = 0.0004
 kdw = 0.0
 satw= 1000.0
+t_filter_w = 0.2
 
 # loop time, seconds. Must be more than the actual time it takes to free CPU use for other process
 loop_time = 0.010
@@ -56,11 +56,12 @@ def fermer_pgrm(signal, frame):
 	print("fermer proprement")
 	import RPi.GPIO as GPIO
 	GPIO.cleanup()
+	if edit_file:
+		my_file.close()
 	sys.exit(0)
-
 signal.signal(signal.SIGINT, fermer_pgrm)
 
-# Must be generated, time continuus
+# The trajectorie must be generated, time continuus. Constant zero is as continuus as it get's
 W_Goal = Z.Z_Constant(0.0)
 V_Goal = Z.Z_Derivative(W_Goal)
 
@@ -69,13 +70,13 @@ Gyro = Z.Z_Filter(Z.Z_Gain(Z.Z_Sensor(mpu6050.get_gyro_y),-0.00213), t_filter_a)
 # Speed of the point between the wheels M
 V_M = Z.Z_Sensor(loc.get_speed)
 # Speed of the weightPoint G
-V_G = Z.Z_Filter(Z.Z_Sum(Gyro, V_M, radius_G, 1.0), 0.2)
+V_G = Z.Z_Filter(Z.Z_Sum(Gyro, V_M, radius_G, 1.0), t_filter_w)
 # Absolute position of the weightPoint (G) on it's trajectorie
-Way_G = Z.Z_Sum(Z.Z_Sensor(loc.get_way), Z.Z_Integral(Gyro, 2.0), 1.0, radius_G)
+Way_G = Z.Z_Filter(Z.Z_Sum(Z.Z_Sensor(loc.get_way), Z.Z_Integral(Gyro, 2.0), 1.0, radius_G), t_filter_w)
 
-# Rotation Speed you want to achieve, I'd say not too fast!
-#I_Goal = Z.Z_PID(kvw, kpw, tpw, kdw, satw, W_Goal, Way_G, V_Goal, V_G)
-I_Goal = Z.Z_Constant(3.0)
+# Falling Speed you want to achieve, I'd say not too fast!
+I_Goal = Z.Z_PID(kvw, kpw, tpw, kdw, satw, W_Goal, Way_G, V_Goal, V_G)
+#I_Goal = Z.Z_Constant(3.0)
 
 # All about orientation
 Orientation = Z.Z_Filter(Z.Z_Sensor(loc.get_teta), 0.1)

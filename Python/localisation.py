@@ -152,9 +152,15 @@ if __name__ == "__main__":
 
 	i = 0
 	print ("pos_x \t pos_Y \t pos_teta \t pos_speed")
-	while(i<200):
+	while(i<2000):
 		update()
 		print (pos_x, pos_y, pos_teta, pos_speed, pos_errors)
+#		print(GPIO.input(pinLeftA),GPIO.input(pinLeftB),GPIO.input(pinRightA),GPIO.input(pinRightB))
 		i += 1
 		sleep(0.01)
+
+pinLeftA = 14
+pinLeftB = 15
+pinRightA= 18
+pinRightB= 23
 
