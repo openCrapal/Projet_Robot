@@ -26,10 +26,11 @@ Ampli = 12.0
 radius_G = 0.2
 
 # PI inclinaison, the value proposed are are the robust ones (half the limit ones) by 12V
-kpa = 50.     #55
+kva = 1.0     #1.0
+kpa = 45.     #55
 tpa = 0.0002  #0.0002
 kda = 1.0     #1.0
-sata= 40.0    #100
+sata= 80.0    #100
 t_filter_a = 0.15
 
 # PID orientation
@@ -37,7 +38,7 @@ kvo = 1.2 #1.2
 kpo = 0.0 # 400
 tpo = 0.0006 #  0.0006
 kdo = 0.0# 0.001
-sato= 0
+sato= 50
 t_filter_o = 0.1
 
 # PID position
@@ -45,8 +46,8 @@ kvw = 0.1
 kpw = 1.0
 tpw = 0.0004
 kdw = 0.0
-satw= 1000.0
-t_filter_w = 0.2
+satw= 0.0
+t_filter_w = 2.0
 
 # loop time, seconds. Must be more than the actual time it takes to free CPU use for other process
 loop_time = 0.010
@@ -67,6 +68,7 @@ V_Goal = Z.Z_Derivative(W_Goal)
 
 # Rotation speed of the bot afak falling speed
 Gyro = Z.Z_Filter(Z.Z_Gain(Z.Z_Sensor(mpu6050.get_gyro_y),-0.00213), t_filter_a)
+D_Gyro = Z.Z_Constant(0.0)
 # Speed of the point between the wheels M
 V_M = Z.Z_Sensor(loc.get_speed)
 # Speed of the weightPoint G
@@ -76,6 +78,7 @@ Way_G = Z.Z_Filter(Z.Z_Sum(Z.Z_Sensor(loc.get_way), Z.Z_Integral(Gyro, 2.0), 1.0
 
 # Falling Speed you want to achieve, I'd say not too fast!
 I_Goal = Z.Z_PID(kvw, kpw, tpw, kdw, satw, W_Goal, Way_G, V_Goal, V_G)
+D_I_Goal= Z.Z_Constant(0.0)
 #I_Goal = Z.Z_Constant(3.0)
 
 # All about orientation
@@ -85,7 +88,7 @@ Teta_Goal = Z.Z_Constant(0.0)
 D_Teta_Goal = Z.Z_Derivative(Teta_Goal)
 
 Dir   = Z.Z_Gain(Z.Z_PID(kvo, kpo, tpo, kdo, sato*Ampli, Teta_Goal, Orientation, D_Teta_Goal, D_Orientation), 1/Ampli)
-Motor = Z.Z_Gain(Z.Z_PID(1.0, kpa, tpa, kda, sata*Ampli, I_Goal, Gyro), 1/Ampli)
+Motor = Z.Z_Gain(Z.Z_PID(kva, kpa, tpa, kda, sata*Ampli, I_Goal, Gyro, D_I_Goal, D_Gyro), 1/Ampli)
 
 while (time.time()-t_begin_program  < 10):
 	t_begin_loop = time.time()

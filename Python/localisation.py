@@ -5,6 +5,7 @@ import RPi.GPIO as GPIO
 import math
 from time import time, sleep
 
+
 #GPIO.cleanup()
 GPIO.setmode(GPIO.BCM) # use hardware pin numbers
 GPIO.setwarnings(True)
@@ -34,9 +35,9 @@ class Encoder():
 
 	def changeA(self, term):
 		newA = GPIO.input(self.pinA)
-		if self.A == newA:
-			self.erreur +=1
-		elif newA:  # rising edge on A
+		#if self.A == newA:
+		#	self.erreur +=1
+		if newA:  # rising edge on A
 			if self.B:
 				self.count -= 1
 			else:
@@ -50,9 +51,9 @@ class Encoder():
 
 	def changeB(self, term):
 		newB = GPIO.input(self.pinB)
-		if newB == self.B:
-			self.erreur += 1
-		elif newB:  # rising edge on B
+		#if newB == self.B:
+		#	self.erreur += 1
+		if newB:  # rising edge on B
 			if self.A:
 				self.count += 1
 			else:
@@ -122,7 +123,7 @@ def get_way():
 # done only when the user need it
 # if you don't call it often enought, you might have some big localisation errors
 def update():
-	GPIO.setmode(GPIO.BCM)
+	#GPIO.setmode(GPIO.BCM)
 	global timer
 	t = time()
 	global pos_x, pos_y, pos_teta, pos_speed, pos_way
@@ -142,6 +143,8 @@ def update():
 if __name__ == "__main__":
 	import sys
 	import signal
+	import pwmMotors
+	pwmMotors.set_speed(50.0,50.0)
 
 	def fermer_pgrm(signal, frame):
 		print("fermer proprement")
@@ -149,18 +152,17 @@ if __name__ == "__main__":
 		sys.exit(0)
 
 	signal.signal(signal.SIGINT, fermer_pgrm)
-
+	mla = mra = mlb = mrb = 0.0
 	i = 0
 	print ("pos_x \t pos_Y \t pos_teta \t pos_speed")
 	while(i<2000):
 		update()
-		print (pos_x, pos_y, pos_teta, pos_speed, pos_errors)
+#		print (pos_x,"\t", pos_y,"\t", pos_teta,"\t", pos_speed)
+		means = """mla = 0.95 * mla + 0.05 * GPIO.input(pinLeftA)
+		mra = 0.95 * mra + 0.05 * GPIO.input(pinRightA)
+		mlb = 0.95 * mlb + 0.05 * GPIO.input(pinLeftB)
+		mrb = 0.95 * mrb + 0.05 * GPIO.input(pinRightB)
+		print(mla,"\t",  mlb,"\t", mra,"\t", mrb) """
 #		print(GPIO.input(pinLeftA),GPIO.input(pinLeftB),GPIO.input(pinRightA),GPIO.input(pinRightB))
 		i += 1
 		sleep(0.01)
-
-pinLeftA = 14
-pinLeftB = 15
-pinRightA= 18
-pinRightB= 23
-
