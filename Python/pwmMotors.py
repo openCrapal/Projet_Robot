@@ -68,6 +68,6 @@ def set_frequency(freq):
 
 if __name__ == "__main__":
 	for i in range(0, 5, 1):
-		set_speed(-10, float(input("Set speed between -100 and 100 : ")))
+		set_speed(0, float(input("Set speed between -100 and 100 : ")))
 	GPIO.cleanup()
 

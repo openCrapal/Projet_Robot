@@ -40,6 +40,7 @@ class Z_Sensor(Z_Constant):
 		self._valeur = self._ref_get_sensor()
 		#print("update sensor")
 
+
 class Z_Sum(Z_Constant):
 	def __init__(self, Z_Item1, Z_Item2, factor1 = 1.0, factor2 = 1.0):
 		Z_Constant.__init__(self)

@@ -15,7 +15,7 @@ low_pass_filter = 0x1a
 bus = smbus.SMBus(1) # or bus = smbus.SMBus(1) for Revision 2 boards
 address = 0x68       # This is the address value read via the i2cdetect command
 
-
+scale = 1.0
 offset_x = offset_y = offset_z = 0
 
 def read_byte(adr):
@@ -44,7 +44,7 @@ def get_gyro_z():
 	else:
 		z_old = v
 	finally:
-		return v - offset_z
+		return (v - offset_z) * scale
 
 y_old = 0.0
 def get_gyro_y():
@@ -56,7 +56,7 @@ def get_gyro_y():
 	else:
 		y_old = v
 	finally:
-		return v - offset_y
+		return (v - offset_y) * scale
 
 x_old = 0.0
 def get_gyro_x():
@@ -68,7 +68,7 @@ def get_gyro_x():
 	else:
 		x_old = v
 	finally:
-		return v - offset_x
+		return (v - offset_x) * scale
 
 
 
@@ -85,7 +85,7 @@ def save_offset(n=100):
 	print ("offset_x: ", offset_x, "\t offset_y: ", offset_y, "\t offset_z :", offset_z)
 
 def init():
-	global offset_z
+	global scale
 	# Wake the 6050 up as it starts in sleep mode
 	try:
 		bus.write_byte_data(address, power_mgmt_1, 0)
@@ -95,6 +95,7 @@ def init():
 		bus.write_byte_data(address, power_mgmt_1, 0)
 		pass
 	bus.write_byte_data(address, set_scale, 2)   # 2->+-1000grad/sec
+	scale = 1000 * math.pi / (180 * 32767)
 	bus.write_byte_data(address, sample_rate, 7)   # 7->1kHz min value, already quite enought
 	bus.write_byte_data(address, low_pass_filter, 0x4) # 6->5Hz ; 0->256Hz
 	save_offset()
