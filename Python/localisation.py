@@ -10,10 +10,10 @@ GPIO.setmode(GPIO.BCM) # use hardware pin numbers
 GPIO.setwarnings(True)
 
 #Pins I use
-pinLeftA = 14
-pinLeftB = 15
-pinRightA= 18
-pinRightB= 23
+pinLeftA = 6
+pinLeftB = 13
+pinRightA= 19
+pinRightB= 26
 
 #Global localisition variables
 pos_x = 0.0
@@ -25,7 +25,7 @@ pos_way = 0.0
 pos_errors = 0
 timer = time()
 
-# physical dimentions of the car
+# physical dimentions of the vehicule
 dxLeft = 0.042*3.141/48
 dxRight= 0.042*3.141/48
 wheels_width = 0.128   # distance beetwin wheels
