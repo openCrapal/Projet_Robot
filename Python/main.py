@@ -5,7 +5,9 @@ import time
 import mpu6050
 mpu6050.init()
 import localisation as loc
-import pwmMotors
+#import pwmMotors
+import Adafruit_PWM_Servo.Adafruit_PWM_Servo_Driver.py as i2cMotors
+i2cMotors.setPWMFreq(25000)
 import automation as Z
 import sys
 import signal
@@ -70,7 +72,7 @@ W_Goal = Z.Z_Constant(0.0)
 V_Goal = Z.Z_Derivative(W_Goal)
 
 # Rotation speed of the bot afak falling speed
-Gyro = Z.Z_Gain(Z.Z_Sensor(mpu6050.get_gyro_y), -1.0)
+Gyro = Z.Z_Gain(Z.Z_Sensor(mpu6050.get_gyro_x), -1.0)
 D_Gyro = Z.Z_Derivative(Gyro)
 Estimated_Incl = Z.Z_Integral(Gyro, 5.0)
 
