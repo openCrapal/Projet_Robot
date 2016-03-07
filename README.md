@@ -16,7 +16,7 @@ then it's gonna recognise the good guys and bring them coffee. Yes you heard me.
 Just think about all the possibilities of additionnal functionnalities : mapping, picture processing, AI, calling it Jarvis....
 
 How it will be done?
-I have allready build a prototype (OCtober 2015), powered by Arduino (Uno Rev3), able to move in my room 
+I have allready build a prototype (October 2015), powered by Arduino (Uno Rev3), able to move in my room 
 and to now where it is thanks to impuls count in both wheels BUT NOT TO STAND BY HIMSELF
 
 Next version will include acceleration sensor MPU6050 on an I²C bus
@@ -28,6 +28,5 @@ It should also drive a webcam et rund picture processing algorithm for cross-fir
 Comments are welcome, it's my first project of that importance.
 I'm a mecanical engineering student, I have got an interesting point of view, but just one, that's the point.
 
-Looking forward to think with you!
 openCrapal, the Frensh guy.
 
