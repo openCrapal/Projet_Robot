@@ -112,7 +112,7 @@ class Z_PID(Z_Filter):
 	# I propose hier a state of the art PID algorithm with posibility of speed pre-control surch as thoses
 	# used in actuals industrial robots, mills... You can still improve by adding a band-pass but that's kind of fancy
 	# You want to control a position, a temperature, a force?
-	# This algorithm compares the value you want, the value from the capture (and their derivatives),
+	# This algorithm compares the value you want, the value from the sensor (and their derivatives),
 	# and decide the adapted electrical voltage (or whaterver energy you use) for you actuator
 	def __init__(self, kv, kp, tp, kd, sat, Z_Goal, Z_Sensor = Z_Constant(0.0), Z_D_Goal = Z_Constant(0.), Z_D_Sensor = Z_Constant(0.)):
 		try:	
@@ -149,10 +149,10 @@ class Z_PID(Z_Filter):
 		# Intelligent saturation : the Integral part (memorie) doesn't keep uselessly growing
 		if self._valeur > self._sat:
 			self._valeur = self._sat
-			self._memorie = self._sat 
+			#self._memorie = self._sat 
 		if self._valeur < -self._sat:
 			self._valeur = - self._sat
-			self._memorie =- self._sat
+			#self._memorie =- self._sat
 		#print("pid , dt: ", dt, "|t ecart :", ecart, "\t valeur :", self._valeur)
 		
 #test du module

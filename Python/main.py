@@ -10,6 +10,10 @@ import sys
 import signal
 import math
 
+myI2cDev = i2c_devices()
+myI2cDev.save_gyro_offset(500)
+myLoc = localisation.loc()
+
 edit_file = False
 if edit_file:
 	import os
@@ -22,13 +26,13 @@ if edit_file:
 radius_G = 0.1
 
 # PI inclinaison, the value proposed are are the robust ones (half the limit ones) by 12V
-kva = 20.0     #1.0
+kva = 0.0     #1.0
 kpa = 8000.    #800
-tpa = 0.0001    #0.0001
+tpa = 10000.0001    #0.0001
 kda = 0.     #1.0
-kaa = 40.0     # 40 à t_filter = 0.4
+kaa = 0.0     # 40 à t_filter = 0.4
 sata= 100.0    #100
-t_filter_a = 0.5 # 0.4
+t_filter_a = 0.05 # 0.05
 
 # PID orientation
 kvo = 0.5#1.2
@@ -66,29 +70,27 @@ def fermer_pgrm(signal, frame):
 
 signal.signal(signal.SIGINT, fermer_pgrm)
 
-def go_robot_go(time_loop=8):
+def go_robot_go(i2cdevice, localisation, time_prgm=8):
 	Z.Z_Index = 0
 	t_begin_program = time.time()
-	loc = localisation.loc()
-	loc.start()
-	myI2cDevs = i2c_devices()
-	myI2cDevs.start()
+	localisation.start()
+	i2cdevice.start()
 	# The trajectorie must be generated, time continuus. Constant zero is as continuus as it gets
 	W_Goal = Z.Z_Constant(0.0)
 	V_Goal = Z.Z_Derivative(W_Goal)
 
 	# Rotation speed of the bot afak falling speed
-	Gyro = Z.Z_Gain(Z.Z_Sensor(myI2cDevs.get_gyro_x), -1.0)
+	Gyro = Z.Z_Gain(Z.Z_Sensor(i2cdevice.get_gyro_x), -1.0)
 	D_Gyro = Z.Z_Derivative(Gyro)
-	Estimated_Incl = Z.Z_Integral(Gyro, 6.0) # High-pass Filter to counter offset's integration
+	Estimated_Incl = Z.Z_Sensor(i2cdevice.get_estimated_incl) 
 
 	# Speed of the point between the wheels: M
-	V_M = Z.Z_Sensor(loc.get_speed)
+	V_M = Z.Z_Sensor(localisation.get_speed)
 	# Speed of the weightPoint: G
 	V_G = Z.Z_Sum(Gyro, V_M, radius_G, 1.0)
 	A_G = Z.Z_Derivative(V_G)
 	# Absolute position of the weightPoint (G) on it's trajectorie
-	Way_G = Z.Z_Sum(Z.Z_Sensor(loc.get_way), Estimated_Incl, 1.0, radius_G)
+	Way_G = Z.Z_Sum(Z.Z_Sensor(localisation.get_way), Estimated_Incl, 1.0, radius_G)
 
 	# Inclinaison you want to achieve, depending on speed and position
 	# This is the very critical point of a balancing bot without absolut level sensor
@@ -97,7 +99,7 @@ def go_robot_go(time_loop=8):
 	D_I_Goal= Z.Z_Derivative(I_Goal)
 
 	# All about orientation
-	Orientation = Z.Z_Filter(Z.Z_Sensor(loc.get_teta), 0.1)
+	Orientation = Z.Z_Filter(Z.Z_Sensor(localisation.get_teta), 0.1)
 	D_Orientation = Z.Z_Filter(Z.Z_Derivative(Orientation), 0.5)
 	Teta_Goal = Z.Z_Constant(0.0)
 	D_Teta_Goal = Z.Z_Derivative(Teta_Goal)
@@ -108,7 +110,7 @@ def go_robot_go(time_loop=8):
 	
 	max = 0.0
 	min = 10.0
-	while (time.time()-t_begin_program  < time_loop):
+	while (time.time()-t_begin_program  < time_prgm):
 		t_begin_loop = time.time()
 		#W_Goal.set_val(W_Goal.get_val() + 0.001)
 		#Teta_Goal.set_val( Teta_Goal.get_val()+0.00)
@@ -119,7 +121,7 @@ def go_robot_go(time_loop=8):
 		#I_Goal.set_val(ampl * math.sin(phase))
 		d = Dir.get_val()
 		m = Motor.get_val()
-		myI2cDevs.set_speed( m+d, m-d)
+		i2cdevice.set_speed( m+d, m-d)
 #		pwmMotors.set_speed( ampl * math.sin(phase), ampl * math.sin(phase))
 #		print("w: {0}\tv: {1}\tI_soll: {2}\tWgoal: {3} ".format(Way_G.get_val(), V_G.get_val(), I_Goal.get_val(), W_Goal.get_val()))
 		Z.Z_Index += 1
@@ -135,9 +137,9 @@ def go_robot_go(time_loop=8):
 			t2=0
 		time.sleep(t2)
 	print("min: ", min, " ; max: ", max)
-	loc.finish()
-	myI2cDevs.set_speed(0,0)
-	myI2cDevs.finish()
+	localisation.finish()
+	i2cdevice.set_speed(0,0)
+	i2cdevice.finish()
 	# End go_robot_go
 
 while True:
@@ -149,7 +151,7 @@ while True:
 			my_file.close()
 		exit()	
 	else:
-		go_robot_go(10)
+		go_robot_go(myI2cDev, myLoc, 10)
 		
 import RPi.GPIO as GPIO
 GPIO.cleanup()

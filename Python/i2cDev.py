@@ -134,11 +134,11 @@ class PWM() :
 		self.i2c.write8(self.__MODE2, self.__OUTDRV)
 		self.i2c.write8(self.__MODE1, self.__ALLCALL)
 		sleep(0.005)					 # wait for oscillator
-		
 		mode1 = self.i2c.readU8(self.__MODE1)
 		mode1 = mode1 & ~self.__SLEEP			 # wake up (reset sleep)
 		self.i2c.write8(self.__MODE1, mode1)
 		sleep(0.005)					 # wait for oscillator
+		self.dirG_old = self.dirR_old = self.vg_old = self.vr_old = 0
 
 	def setPWMFreq(self, freq):
 		#Sets the PWM frequency
@@ -169,7 +169,6 @@ class PWM() :
 		self.i2c.write8(self.__ALL_LED_OFF_H, off >> 8)	
 
 	def set_speed(self, v1, v2):
-		global DIRg, DIRr, PWMg, PWMr
 		dirG = 0
 		if v1>=0:
 			if v1>=100:
@@ -195,11 +194,18 @@ class PWM() :
 		vg = math.trunc(4095*v1/100.0)
 		vr = math.trunc(4095*v2/100.0)
 
-		self.setPWM(DIRg, 0, dirG)
-		self.setPWM(DIRr, 0, dirR)
-		self.setPWM(PWMg, 0, vg)
-		self.setPWM(PWMr, 0, vr)
-	
+		if (dirG != self.dirG_old):
+			self.setPWM(DIRg, 0, dirG)
+		if (dirR != self.dirR_old):
+			self.setPWM(DIRr, 0, dirR)
+		if (vg != self.vg_old):
+			self.setPWM(PWMg, 0, vg)
+		if (vr != self.vr_old):
+			self.setPWM(PWMr, 0, vr)
+		self.dirG_old = dirG
+		self.dirR_old = dirR
+		self.vr_old = vr
+		self.vg_old = vg
 
 class mpu6050():
 	#register adress
@@ -208,16 +214,17 @@ class mpu6050():
 	set_scale = 0x1b
 	sample_rate = 0x19
 	low_pass_filter = 0x1a
+	offset_x = 0
 	
 	def get_x(self):
 		try:
 			v = self.i2c.readS16(0x43, False)
 		except:
 			print("error reading gyro x")
-			v = 0
+			return (0)
 			pass
-		#print(v-self.offset_x)
-		return ( v - self.offset_x ) * self.scale
+		else:
+			return ( v - self.offset_x ) * self.scale
 
 	def save_offset(self, n=500):
 		self.offset_x = 0
@@ -253,10 +260,14 @@ class i2c_devices(Thread):
 		self.motors = PWM()
 		self.gyro = mpu6050()
 		self.v1 = self.v2 = 0
-		self.gyro_x = 0
+		self.gyro_x = 0.0
+		self.estimated_incl = 0.0
 		self.new_val = True
 		self.notDone = False
 		self.t_filter = 0.01
+
+	def save_gyro_offset(self, n=200):
+		self.gyro.save_offset(500)
 		
 	def set_speed(self, v1, v2):
 		self.v1 = v1
@@ -266,23 +277,30 @@ class i2c_devices(Thread):
 	def get_gyro_x(self):
 		return self.gyro_x
 
+	def get_estimated_incl(self):
+		return self.estimated_incl
+
 	def finish(self):
-		self.notDone = False
-		self.new_val = False
 		self.motors.set_speed(0,0)
-		self.motors.softwareReset()
-		self.gyro_x = self.v1 = self.v2 = 0
-		self.__init__()
+		#self.motors.softwareReset()
+		Thread.__init__(self)
+		self.notDone = False
+		self.v1 = self.v2 = 0
+		self.gyro_x = 0.0
+		self.estimated_incl = 0.0
+		#self.__init__()
+		sleep(0.05)
 
 	def run(self):
 		self.notDone = True
-		self.gyro.save_offset(500)
 		while self.notDone :
 			t = t_old = time()
 			while (self.notDone and not self.new_val):
+				sleep(0.0005)
 				r = self.gyro.get_x()
 				t = time()
 				dt = t - t_old
+				self.estimated_incl += r * dt
 				self.gyro_x = (self.gyro_x * self.t_filter + dt * r) / (dt + self.t_filter)
 				t_old = t
 				#print(dt)
@@ -295,14 +313,15 @@ class i2c_devices(Thread):
 
 if __name__ == "__main__":
 	myI2cDev = i2c_devices()
+	myI2cDev.save_gyro_offset(500)
 	myI2cDev.start()
 	for i in range(0, 90, 1):
 		myI2cDev.set_speed(i, i)
-		sleep(0.01)
-		print(myI2cDev.get_gyro_x())
+		sleep(0.1)
+		print(myI2cDev.get_gyro_x(), myI2cDev.get_estimated_incl())
 	for i in range(90, 0, -1):
 		myI2cDev.set_speed(i,i)
-		sleep(0.01)
-		print(myI2cDev.get_gyro_x())
+		sleep(0.1)
+		print(myI2cDev.get_gyro_x(), myI2cDev.get_estimated_incl())
 	myI2cDev.finish()
 
