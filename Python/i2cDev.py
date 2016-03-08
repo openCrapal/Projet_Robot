@@ -219,12 +219,10 @@ class mpu6050():
 	def get_x(self):
 		try:
 			v = self.i2c.readS16(0x43, False)
-		except:
-			print("error reading gyro x")
-			return (0)
-			pass
-		else:
 			return ( v - self.offset_x ) * self.scale
+		except:
+			return(0)
+			pass
 
 	def save_offset(self, n=500):
 		self.offset_x = 0
