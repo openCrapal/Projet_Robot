@@ -87,9 +87,28 @@ class Z_HighPassFilter(Z_Filter):
 		self._valeur = (self._valeur + val - self._memorie) * self._t_cut / ( self._t_cut + time.time() - self._timer0)
 		self._memorie = val
 
+class Z_BandStopFilter(Z_Constant):
+	def __init__(self, Z_item, t_low, t_high):
+		Z_Constant.__init__(self, 0.0)
+		self.lowPass = Z_Filter(Z_item, t_low)
+		self.highPass= Z_HighPassFilter(Z_item, t_high)
+		
+	def _update(self):
+		self._valeur = self.lowPass.get_val() + self.highPass.get_val()
+
+class Z_BandPassFilter(Z_Filter):
+	def __init__(self, Z_item, t_low, t_high):
+		Z_Constant.__init__(self, 0.0)
+		self.highPass= Z_HighPassFilter(Z_item, t_high)
+		self.lowPass = Z_Filter(self.highPass, t_low)
+		
+	def _update(self):
+		self._valeur = self.lowPass.get_val()
+		
+
 
 class Z_Derivative(Z_Filter):
-	# Oh yeah, speed = Z_Derivative( my_Z_position ) Awsome right?
+	# Oh yeah, Z_Speed = Z_Derivative( my_Z_position ) Awsome right?
 	def __init__(self, Z_item):
 		Z_Filter.__init__(self, Z_item)
 		
@@ -110,7 +129,7 @@ class Z_Integral(Z_Filter):
 class Z_PID(Z_Filter):
 	# Once you've use a PID controller, it all seems fairly natural. Otherways, it's kind of complicated
 	# I propose hier a state of the art PID algorithm with posibility of speed pre-control surch as thoses
-	# used in actuals industrial robots, mills... You can still improve by adding a band-pass but that's kind of fancy
+	# used in actuals industrial robots, mills... You can still improve by adding a band-stop but that's kind of fancy
 	# You want to control a position, a temperature, a force?
 	# This algorithm compares the value you want, the value from the sensor (and their derivatives),
 	# and decide the adapted electrical voltage (or whaterver energy you use) for you actuator

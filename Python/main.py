@@ -27,19 +27,19 @@ radius_G = 0.1
 
 # PI inclinaison, the value proposed are are the robust ones (half the limit ones) by 12V
 kva = 0.0     #1.0
-kpa = 8000.    #800
+kpa = 3000.    #800
 tpa = 10000.0001    #0.0001
 kda = 0.     #1.0
 kaa = 0.0     # 40 à t_filter = 0.4
-sata= 100.0    #100
-t_filter_a = 0.05 # 0.05
+sata= 2000.0    #100
+#t_filter_a = 0.002 # 0.05
 
 # PID orientation
 kvo = 0.5#1.2
 kpo = 100. # 400
 tpo = 0.0001 #  0.0006
 kdo = 0.001# 0.001
-sato= 0
+sato= 10
 t_filter_o = 0.05
 
 # PID position
@@ -51,7 +51,7 @@ satw= 00.0
 t_filter_w = 2.0
 
 # loop time, seconds. Must be more than the actual time it takes to free CPU use for other process
-loop_time = 0.005
+loop_time = 0.002
 t_begin_program = time.time()
 
 def fermer_pgrm(signal, frame):
@@ -80,7 +80,7 @@ def go_robot_go(i2cdevice, localisation, time_prgm=8):
 	V_Goal = Z.Z_Derivative(W_Goal)
 
 	# Rotation speed of the bot afak falling speed
-	Gyro = Z.Z_Gain(Z.Z_Sensor(i2cdevice.get_gyro_x), -1.0)
+	Gyro = Z.Z_Sensor(i2cdevice.get_gyro_x)
 	D_Gyro = Z.Z_Derivative(Gyro)
 	Estimated_Incl = Z.Z_Sensor(i2cdevice.get_estimated_incl) 
 
@@ -105,8 +105,9 @@ def go_robot_go(i2cdevice, localisation, time_prgm=8):
 	D_Teta_Goal = Z.Z_Derivative(Teta_Goal)
 
 	Dir   = Z.Z_Filter(Z.Z_Gain(Z.Z_PID(kvo, kpo, tpo, kdo, sato*U_alim, Teta_Goal, Orientation, D_Teta_Goal, D_Orientation), 1/U_alim), t_filter_o)
-	Motor = Z.Z_Filter(Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*U_alim, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/U_alim, -kaa/U_alim), t_filter_a)
-	#Motor = Z.Z_Filter(Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*Ampli, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/Ampli, -kaa/U_alim), t_filter_a)
+	#Motor = Z.Z_Filter(Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*U_alim, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/U_alim, -kaa/U_alim), t_filter_a)
+	Motor = Z.Z_BandStopFilter(Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*U_alim, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/U_alim, -kaa/U_alim), 0.1, 0.05)
+
 	
 	max = 0.0
 	min = 10.0
@@ -121,7 +122,7 @@ def go_robot_go(i2cdevice, localisation, time_prgm=8):
 		#I_Goal.set_val(ampl * math.sin(phase))
 		d = Dir.get_val()
 		m = Motor.get_val()
-		i2cdevice.set_speed( m+d, m-d)
+		i2cdevice.set_speed( m-d, m+d)
 #		pwmMotors.set_speed( ampl * math.sin(phase), ampl * math.sin(phase))
 #		print("w: {0}\tv: {1}\tI_soll: {2}\tWgoal: {3} ".format(Way_G.get_val(), V_G.get_val(), I_Goal.get_val(), W_Goal.get_val()))
 		Z.Z_Index += 1
