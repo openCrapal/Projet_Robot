@@ -13,45 +13,44 @@ import math
 myI2cDev = i2c_devices()
 myI2cDev.save_gyro_offset(500)
 myLoc = localisation.loc()
+myI2cDev.start()
+myLoc.start()
 
-edit_file = False
+edit_file = True
 if edit_file:
 	import os
 	os.chdir("/home/pi/Documents/results")
-	print (os.getcwd())
-	my_file = open(time.strftime("%B_%d_%H_%M_%S"), 'w')
-	my_file.write("time(s)\tmpu6050\tphase=5rad/sec")
-
-# Heigh of the weightPoint relative to the wheels axis
-radius_G = 0.1
+	print ("File open at ",os.getcwd())
+	my_file = open(time.strftime("%B_%d_%H_%M_%S") + "txt", 'w' )
+	my_file.write("time(s)\tmpu6050\testimated_incl\tU_mot\tpos_way")
 
 # PI inclinaison, the value proposed are are the robust ones (half the limit ones) by 12V
-kva = 0.0     #1.0
-kpa = 3000.    #800
-tpa = 10000.0001    #0.0001
-kda = 0.     #1.0
-kaa = 0.0     # 40 à t_filter = 0.4
-sata= 2000.0    #100
+kva = 30.0      	#30.0
+kpa = 1000.     	#1000
+tpa = 0.00001   	#0.00001
+kda = 5.0     		#5.0
+kaa = 0.0
+sata= 200.0    		#200
 #t_filter_a = 0.002 # 0.05
 
 # PID orientation
-kvo = 0.5#1.2
-kpo = 100. # 400
-tpo = 0.0001 #  0.0006
-kdo = 0.001# 0.001
-sato= 10
-t_filter_o = 0.05
+kvo = 2. 	#1.2
+kpo = 500. # 400
+tpo = 0.000017 #  0.0006
+kdo = 0.01# 0.001
+sato= 80
+t_filter_o = 0.001
 
 # PID position
-kvw = 1.
-kpw = 0.0
-tpw = 1000.4
-kdw = 0.0
-satw= 00.0
-t_filter_w = 2.0
+kvw = 0.7
+kpw = 0.05
+tpw = 0.6
+kdw = 0.00005
+satw= 10.0
+t_filter_w = 0.1
 
 # loop time, seconds. Must be more than the actual time it takes to free CPU use for other process
-loop_time = 0.002
+loop_time = 0.001
 t_begin_program = time.time()
 
 def fermer_pgrm(signal, frame):
@@ -59,13 +58,14 @@ def fermer_pgrm(signal, frame):
 	import RPi.GPIO as GPIO
 	GPIO.cleanup()
 		
-	try:
-		loc.finish()
-	except:
-		pass
+	myLoc.finish()
+	myI2cDev.finish()
+	#del myLoc
+	#del myI2cDev
 
 	if edit_file:
 		my_file.close()
+	time.sleep(0.1)
 	sys.exit(0)
 
 signal.signal(signal.SIGINT, fermer_pgrm)
@@ -73,8 +73,8 @@ signal.signal(signal.SIGINT, fermer_pgrm)
 def go_robot_go(i2cdevice, localisation, time_prgm=8):
 	Z.Z_Index = 0
 	t_begin_program = time.time()
-	localisation.start()
-	i2cdevice.start()
+	localisation.reset()
+	i2cdevice.reset()
 	# The trajectorie must be generated, time continuus. Constant zero is as continuus as it gets
 	W_Goal = Z.Z_Constant(0.0)
 	V_Goal = Z.Z_Derivative(W_Goal)
@@ -94,8 +94,8 @@ def go_robot_go(i2cdevice, localisation, time_prgm=8):
 
 	# Inclinaison you want to achieve, depending on speed and position
 	# This is the very critical point of a balancing bot without absolut level sensor
-	#I_Goal = Z.Z_Filter(Z.Z_Sum(Z.Z_PID(kvw, kpw, tpw, kdw, satw, W_Goal, Way_G, V_Goal, V_G), A_G, 1.0, -kaw), t_filter_w)
-	I_Goal = Z.Z_Constant(0.0)
+	I_Goal = Z.Z_Filter(Z.Z_Gain(Z.Z_PID(kvw, kpw, tpw, kdw, satw, W_Goal, Way_G, V_Goal, V_G), -1.0), t_filter_w)
+	#I_Goal = Z.Z_Constant(0.0)
 	D_I_Goal= Z.Z_Derivative(I_Goal)
 
 	# All about orientation
@@ -103,15 +103,18 @@ def go_robot_go(i2cdevice, localisation, time_prgm=8):
 	D_Orientation = Z.Z_Filter(Z.Z_Derivative(Orientation), 0.5)
 	Teta_Goal = Z.Z_Constant(0.0)
 	D_Teta_Goal = Z.Z_Derivative(Teta_Goal)
-
-	Dir   = Z.Z_Filter(Z.Z_Gain(Z.Z_PID(kvo, kpo, tpo, kdo, sato*U_alim, Teta_Goal, Orientation, D_Teta_Goal, D_Orientation), 1/U_alim), t_filter_o)
-	#Motor = Z.Z_Filter(Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*U_alim, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/U_alim, -kaa/U_alim), t_filter_a)
-	Motor = Z.Z_BandStopFilter(Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*U_alim, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/U_alim, -kaa/U_alim), 0.1, 0.05)
-
 	
+	Dir   = Z.Z_BandStopFilter(Z.Z_Gain(Z.Z_PID(kvo, kpo, tpo, kdo, sato*U_alim, Teta_Goal, Orientation, D_Teta_Goal, D_Orientation), 1/U_alim), 0.9, 0.05)
+	#Dir   = Z.Z_Filter(Z.Z_Gain(Z.Z_PID(kvo, kpo, tpo, kdo, sato*U_alim, Teta_Goal, Orientation, D_Teta_Goal, D_Orientation), 1/U_alim), t_filter_o)
+	#Motor = Z.Z_Filter(Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*U_alim, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/U_alim, -kaa/U_alim), t_filter_a)
+	Motor = Z.Z_BandStopFilter(Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*U_alim, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/U_alim, -kaa/U_alim), 0.18, 0.01)
+	#Motor = Z.Z_Sum(Z.Z_PID(kva, kpa, tpa, kda, sata*U_alim, I_Goal, Estimated_Incl, D_I_Goal, Gyro), D_Gyro, 1/U_alim, -kaa/U_alim)
+	
+	i = 0	
 	max = 0.0
 	min = 10.0
 	while (time.time()-t_begin_program  < time_prgm):
+		W_Goal._valeur = 0.1 * (1 - math.cos((time.time()-t_begin_program)*6.28*0.2))
 		t_begin_loop = time.time()
 		#W_Goal.set_val(W_Goal.get_val() + 0.001)
 		#Teta_Goal.set_val( Teta_Goal.get_val()+0.00)
@@ -127,30 +130,27 @@ def go_robot_go(i2cdevice, localisation, time_prgm=8):
 #		print("w: {0}\tv: {1}\tI_soll: {2}\tWgoal: {3} ".format(Way_G.get_val(), V_G.get_val(), I_Goal.get_val(), W_Goal.get_val()))
 		Z.Z_Index += 1
 		if edit_file:
-			my_file.write("{0}\t{1}\t{2}\n".format(time.time()-t_begin_program, Gyro.get_val(), phase)) # m/pwmMotors.pwmAmpli))
+			my_file.write("{0}\t{1}\t{2}\t{3}\t{4}\n".format(time.time()-t_begin_program, i2cdevice.get_gyro_x(), i2cdevice.get_estimated_incl(),  m/U_alim, localisation.get_way()))
 
+		#print(time.time()-t_begin_program, "\t", Orientation.get_val())
 		t2 = loop_time + t_begin_loop - time.time()
 #		print (Estimated_Incl.get_val())
 #		print (t2)
+		
 		if (t2>max) : max = t2
 		if (t2<min) : min = t2
 		if t2<0:
 			t2=0
 		time.sleep(t2)
 	print("min: ", min, " ; max: ", max)
-	localisation.finish()
 	i2cdevice.set_speed(0,0)
-	i2cdevice.finish()
 	# End go_robot_go
 
-while True:
+Continue = True
+while Continue:
 	mode = input("Quit: q ; Continue: c\n$ ")
 	if (mode == "q" or mode == "Q"):
-		import RPi.GPIO as GPIO
-		GPIO.cleanup()
-		if edit_file:
-			my_file.close()
-		exit()	
+		Continue = False	
 	else:
 		go_robot_go(myI2cDev, myLoc, 10)
 		
@@ -159,3 +159,9 @@ GPIO.cleanup()
 if edit_file:
 	my_file.close()
 
+myLoc.finish()
+myI2cDev.finish()
+del myLoc
+del myI2cDev
+time.sleep(0.1)
+sys.exit()

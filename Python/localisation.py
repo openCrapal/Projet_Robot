@@ -80,12 +80,15 @@ class Encoder():
 # Create an item of the loc class to get track of you position
 # The run() method must be called frequently
 class loc(Thread):
-	def __init__(self):
-		Thread.__init__(self)
+	def reset(self):
 		self.left_speed = self.right_speed = self.pos_speed = 0.0
 		self.pos_x = self.pos_y = self.pos_teta = self.pos_way = 0.0
-		self.cycle_time = 0.005
-		self.t_filter = 0.01
+		
+	def __init__(self):
+		Thread.__init__(self)
+		self.cycle_time = 0.0015
+		self.t_filter = 0.02
+		self.reset()
 		self.NotDone = False
 
 	def run(self):
@@ -98,6 +101,8 @@ class loc(Thread):
 		DtetaLeft = math.atan(dxLeft /(2.0*wheels_width))
 		DtetaRight= math.atan(dxRight/(2.0*wheels_width))
 		t_old = time()
+		tmin = 10
+		tmax = 0
 
 		while(self.NotDone):
 			count_l = - Enc_Left.get_count()
@@ -127,11 +132,14 @@ class loc(Thread):
 				#self.pos_errors = self.Enc_Right.erreur + self.Enc_Left.erreur
 
 			t_sleep = self.cycle_time - time()  + t
-			if t_sleep < 0:
-				print ("Tread location : cycle time too short")
-				t_sleep = 0.001
-			sleep(t_sleep)
+			#if t_sleep > tmax: tmax=t_sleep
+			#elif t_sleep<tmin: tmin=t_sleep
+			#if t_sleep < 0:
+			#	print ("Tread location : cycle time too short")
+			#	t_sleep = 0.001
+			#sleep(t_sleep)
 		# End_While
+		#print("loc t_cycle", self.cycle_time, "\tmin ", tmin, "\tmax ", tmax)
 	# End_run
 
 

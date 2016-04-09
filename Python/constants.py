@@ -3,13 +3,13 @@
 
 # Common constants
 
-U_alim = 12	# Voltage of the alim in V
+U_alim = 7.2	# Voltage of the alim in V
 
 # physical dimentions of the vehicule
 dxLeft = 0.042*3.141/48.0
 dxRight= 0.042*3.141/48.0		# Perimeter of the wheel / nbre of encoder tilt per rotation
 wheels_width = 0.128   			# distance beetwin wheels
-radius_G = 0.18				# Heigh of the weightPoint relative to the wheels axis
+radius_G = 0.15				# Heigh of the weightPoint relative to the wheels axis
 
 # motor constants
 Kv_left = 30.9 * dxLeft			# Speed / U_motor  (m/s /V)

@@ -245,7 +245,7 @@ class mpu6050():
 			pass
 
 		self.i2c.write8(self.set_scale, 2) 		# 2 => +/- 1000 °/sec
-		self.i2c.write8(self.sample_rate, 7)		# 7=>1kHz; 6=>500Hz? rate
+		self.i2c.write8(self.sample_rate, 1)		# 7=>1kHz; 6=>2kHz? rate
 		self.i2c.write8(self.low_pass_filter, 0x0)	# 6=>5Hz ; 0=>256Hz  bandpass
 		
 		self.scale = 1000.0 * 3.141 / ( 8 * 32768 * 180 ) # rad/sec
@@ -253,16 +253,19 @@ class mpu6050():
 		sleep(0.005)
 
 class i2c_devices(Thread):
-	def __init__(self):
-		Thread.__init__(self)
-		self.motors = PWM()
-		self.gyro = mpu6050()
+	def reset(self):
 		self.v1 = self.v2 = 0
 		self.gyro_x = 0.0
 		self.estimated_incl = 0.0
 		self.new_val = True
-		self.notDone = False
-		self.t_filter = 0.01
+		
+	def __init__(self):
+		Thread.__init__(self)
+		self.motors = PWM()
+		self.gyro = mpu6050()
+		self.t_filter = 0.005
+		self.reset()
+		self.dt_mot = time()
 
 	def save_gyro_offset(self, n=200):
 		self.gyro.save_offset(500)
@@ -271,6 +274,7 @@ class i2c_devices(Thread):
 		self.v1 = v1
 		self.v2 = v2
 		self.new_val = True
+		self.dt_mot = time()
 
 	def get_gyro_x(self):
 		return self.gyro_x
@@ -290,24 +294,34 @@ class i2c_devices(Thread):
 		sleep(0.05)
 
 	def run(self):
+		tmin = 10
+		tmax = 0
+		mmin = 10
+		mmax = 0
 		self.notDone = True
 		while self.notDone :
 			t = t_old = time()
 			while (self.notDone and not self.new_val):
-				sleep(0.0005)
+				sleep(0.0001)
 				r = self.gyro.get_x()
 				t = time()
 				dt = t - t_old
 				self.estimated_incl += r * dt
 				self.gyro_x = (self.gyro_x * self.t_filter + dt * r) / (dt + self.t_filter)
 				t_old = t
-				#print(dt)
+				#if dt > tmax: tmax = dt
+				#elif dt<tmin: tmin = dt
 				if (not self.notDone) or self.new_val: break
-				sleep(0.001)
+				sleep(0.0001)
 								
 			self.motors.set_speed(self.v1, self.v2)
 			self.new_val = False
-			
+			#dtMot = time()-self.dt_mot
+			#if dtMot > mmax: mmax = dtMot
+			#elif dtMot<mmin: mmin = dtMot
+		#print("I2cDevice loop time min ", tmin, "\max ", tmax)
+		#print("I2cMots react time min ", mmin, "\max ", mmax)
+		#END_LOOP; exit thread
 
 if __name__ == "__main__":
 	myI2cDev = i2c_devices()
