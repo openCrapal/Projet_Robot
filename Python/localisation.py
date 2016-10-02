@@ -86,8 +86,8 @@ class loc(Thread):
 		
 	def __init__(self):
 		Thread.__init__(self)
-		self.cycle_time = 0.0015
-		self.t_filter = 0.02
+		self.cycle_time = 0.004
+		self.t_filter = 0.05
 		self.reset()
 		self.NotDone = False
 
@@ -103,7 +103,7 @@ class loc(Thread):
 		t_old = time()
 		tmin = 10
 		tmax = 0
-
+		print ("begin thread localisation")
 		while(self.NotDone):
 			count_l = - Enc_Left.get_count()
 			count_r =  Enc_Right.get_count()
@@ -139,6 +139,7 @@ class loc(Thread):
 			#	t_sleep = 0.001
 			#sleep(t_sleep)
 		# End_While
+		print("Exit thread localisation")
 		#print("loc t_cycle", self.cycle_time, "\tmin ", tmin, "\tmax ", tmax)
 	# End_run
 
@@ -174,10 +175,16 @@ class loc(Thread):
 if __name__ == "__main__":
 	from i2cDev import i2c_devices 
 	i2cDevs = i2c_devices()
-	i2cDevs.set_speed(0,0)
+	i2cDevs.start()
+	i2cDevs.set_speed(20,20)
 	MyLoc = loc()
 	MyLoc.start()
 
+	GPIO.setup(pinLeftA, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+	GPIO.setup(pinLeftB, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+	GPIO.setup(pinRightA, GPIO.IN, pull_up_down=GPIO.PUD_UP) 
+	GPIO.setup(pinRightB, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+	
 	def test_kv(Motors):
 		def test_value(value_pwm):
 			i2cDevs.set_speed(value_pwm, value_pwm)
@@ -205,17 +212,21 @@ if __name__ == "__main__":
 	x = 0
 	print ("pos_x \t pos_Y \t pos_teta \t pos_speed")
 	t = timer = time()
-	while(t - timer < 8):
+	n=0
+	while(t - timer < 60):
+		n = n+1
 		t = time()
-#		i2cDevs.set_speed(0, 0)
-		print (MyLoc.get_x(),"\t", MyLoc.get_y(),"\t", MyLoc.get_teta(),"\t", MyLoc.get_speed())
-		#mla = 0.99 * mla + 0.01 * GPIO.input(pinLeftA)
-		#mra = 0.99 * mra + 0.01 * GPIO.input(pinRightA)
-		#mlb = 0.99 * mlb + 0.01 * GPIO.input(pinLeftB)
-		#mrb = 0.99 * mrb + 0.01 * GPIO.input(pinRightB)
-#		print(mla,"\t",  mlb,"\t", mra,"\t", mrb) 
+		i2cDevs.set_speed(40, 40)
+		#print (MyLoc.get_x(),"\t", MyLoc.get_y(),"\t", MyLoc.get_teta(),"\t", MyLoc.get_speed())
+		mla = 0.99 * mla + 0.01 * GPIO.input(pinLeftA)
+		mra = 0.99 * mra + 0.01 * GPIO.input(pinRightA)
+		mlb = 0.99 * mlb + 0.01 * GPIO.input(pinLeftB)
+		mrb = 0.99 * mrb + 0.01 * GPIO.input(pinRightB)
+		if n > 5:
+			print(mla,"\t",  mlb,"\t", mra,"\t", mrb) 
+			n=0
 #		print(GPIO.input(pinLeftA),GPIO.input(pinLeftB),GPIO.input(pinRightA),GPIO.input(pinRightB))
-		sleep(0.1)
+		sleep(0.001)
 		x += 1
 
 #	test_kv(pwmMotors)

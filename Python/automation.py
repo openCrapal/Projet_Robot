@@ -162,16 +162,21 @@ class Z_PID(Z_Filter):
 		ecart =  self._kv *  (self._Z_Item.get_val() - self._Sensor.get_val())
 		ecart += (self._D_Goal.get_val() - self._D_Sensor.get_val())
 		self._memorie =+ ecart * dt / self._tp
+		# The Integral part (memorie) can't exed 50% of the max value (sat) It would suppose a problem anyway
+		if self._memorie > 0.5 * self._sat/self._kp:
+			self._memorie = 0.5 * self._sat/self._kp
+		elif self._memorie < -0.5 * self._sat/self._kp:
+			self._memorie = -0.5 * self._sat/self._kp
+
 		self._valeur = ecart * self._kp + self._memorie + (ecart - self._ecart_old) * self._kd / dt
 		self._ecart_old = ecart
 		
-		# Intelligent saturation : the Integral part (memorie) doesn't keep uselessly growing
+		# Saturation :
 		if self._valeur > self._sat:
 			self._valeur = self._sat
-			#self._memorie = self._sat 
-		if self._valeur < -self._sat:
+		elif self._valeur < -self._sat:
 			self._valeur = - self._sat
-			#self._memorie =- self._sat
+
 		#print("pid , dt: ", dt, "|t ecart :", ecart, "\t valeur :", self._valeur)
 		
 #test du module
