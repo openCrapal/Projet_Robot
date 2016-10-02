@@ -22,26 +22,25 @@ class Phase:
         for i in range(2, self._size + 1, 1):
             self._aj.append(self._aj[i - 1] * tau / i)
 
-
-    def get_Profil_Vit(self, t):
-        Profil_Vit = list()
+    def get_profil_vit(self, t):
+        profil_vit = list()
         for i in range(self._size):
-            Profil_Vit.append(0.0)
+            profil_vit.append(0.0)
         if t >= self._t0 + self._tau:
             t1 = t - self._t0 - self._tau
             for i in range(1, self._size, 1):
-                Profil_Vit[i] = 0.0
+                profil_vit[i] = 0.0
                 for j in range(0, i, 1):
-                    Profil_Vit[i] += self._aj[i - j] * math.pow(t1, j) / math.factorial(j)
+                    profil_vit[i] += self._aj[i - j] * math.pow(t1, j) / math.factorial(j)
         elif t >= self._t0:
             t1 = t - self._t0
-            Profil_Vit[0] = self._ampl
+            profil_vit[0] = self._ampl
             for i in range(1, self._size, 1):
-                Profil_Vit[i] = Profil_Vit[i - 1] * t1 / i
-        return (Profil_Vit)
+                profil_vit[i] = profil_vit[i - 1] * t1 / i
+        return profil_vit
 
 
-class Profil_Vit:
+class ProfilVitesse:
     def __init__(self, degree, list_of_maxis=[1.0], pos_init=0.0):
         self._degree = degree
         self._pos_init = pos_init
@@ -63,7 +62,7 @@ class Profil_Vit:
             self._pos[i] = 0.0
         self._pos[-1] = self._pos_init
         for chaque_phase in self._phases:
-            influss = chaque_phase.get_Profil_Vit(t)
+            influss = chaque_phase.get_profil_vit(t)
             for i in range(0, self._degree + 1, 1):
                 self._pos[i] += influss[i]
         self._pos[-1] += self._pos_init
@@ -85,7 +84,7 @@ class Profil_Vit:
         for i in range(len(table) // 2, len(table), 1):
             self._phases.append(Phase(table[i] * ampl, tau, t_middle + to + i * tau, self._degree))
 
-    # set the Profil_Vit generator to the fastest way from pos_init to goal
+    # set the ProfilVitesse generator to the fastest way from pos_init to goal
     # both are steal standing points !!!
     # default pos_init is the point you were, but you can reset it
     def set_goal(self, goal, to=time.time()):
@@ -123,9 +122,9 @@ class Profil_Vit:
 if __name__ == "__main__":
     maxis = [1000.0, 100.0, 3., 1.0, 1000.0]
     ma_phase = Phase(-1.0, 2.0, 1.0, 5)
-    ma_Profil_Vit = Profil_Vit(4, maxis)
+    ma_ProfilVitesse = ProfilVitesse(4, maxis)
     print("degree4")
-    ma_Profil_Vit.set_goal(10.0, 0.0)
+    ma_ProfilVitesse.set_goal(10.0, 0.0)
     for i in range(0, 201, 1):
-        ma_Profil_Vit.update(i / 10.)
-        print(i / 10.0, ", ", ma_Profil_Vit._pos)
+        ma_ProfilVitesse.update(i / 10.)
+        print(i / 10.0, ", ", ma_ProfilVitesse._pos)
