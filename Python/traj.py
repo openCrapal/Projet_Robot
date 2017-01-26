@@ -4,127 +4,168 @@
 import math
 import time
 
-
-# import subprocess
+debug = True
 
 # Goal hier is to generate goal value that the controller can follow
 # degree = n => the nth derivative as a finite maximal value
 # 2 is usualy enought, 3 is state of the art for CNC-machines
-
-class Phase:
-    def __init__(self, ampl, tau, t0, degree=3):
-        self._size = degree + 1
-        self._ampl = ampl
-        self._tau = tau
-        self._t0 = t0
-        # 		[ xn+1, xn , ... , x1, x]
-        self._aj = [0.0, ampl * tau]
-        for i in range(2, self._size + 1, 1):
-            self._aj.append(self._aj[i - 1] * tau / i)
-
-    def get_profil_vit(self, t):
-        profil_vit = list()
-        for i in range(self._size):
-            profil_vit.append(0.0)
-        if t >= self._t0 + self._tau:
-            t1 = t - self._t0 - self._tau
-            for i in range(1, self._size, 1):
-                profil_vit[i] = 0.0
-                for j in range(0, i, 1):
-                    profil_vit[i] += self._aj[i - j] * math.pow(t1, j) / math.factorial(j)
-        elif t >= self._t0:
-            t1 = t - self._t0
-            profil_vit[0] = self._ampl
-            for i in range(1, self._size, 1):
-                profil_vit[i] = profil_vit[i - 1] * t1 / i
-        return profil_vit
+# [X, X', X'', ...]
 
 
-class ProfilVitesse:
-    def __init__(self, degree, list_of_maxis=[1.0], pos_init=0.0):
-        self._degree = degree
-        self._pos_init = pos_init
-        self._pos = list()
-        self._maxis = list()
-        for i in range(degree + 1):
-            self._pos.append(0.0)
-            try:
-                self._maxis.append(list_of_maxis[i])
-            except:
-                print("max value of rang {0} not defined. setting to 1.0".format(i))
-                self._maxis.append(1.0)
-                pass
-        self._phases = list()
+class Traj7Seg:
+    def __init__(self, v_m=0.5, a_m=5, j_m=500):
+        self.vm = v_m   # Absolut max Speed m/s
+        self.am = a_m   # Absolut max Acceleeration m/s/s
+        self.jm = j_m   # Absolut max Jerk m/s/s/s
 
-    def update(self, t=time.time()):
-        # clear
-        for i in range(0, self._degree, 1):
-            self._pos[i] = 0.0
-        self._pos[-1] = self._pos_init
-        for chaque_phase in self._phases:
-            influss = chaque_phase.get_profil_vit(t)
-            for i in range(0, self._degree + 1, 1):
-                self._pos[i] += influss[i]
-        self._pos[-1] += self._pos_init
+        self.ampls = []
+        self.vector = []
+        for i in range(0, 7):
+            self.ampls.append(0.0)
+            self.vector.append([0.0, 0.0])  # Jerk, duration
 
-    # example
-    # print(self._pos)
+        self.pos_init = [0.0, 0.0, 0.0]     # Position, Speed, Acceleration
+        self.pos_current= [0.0, 0.0, 0.0]   # Position, Speed, Acceleration
+        self.pos_goal = [0.0, 0.0, 0.0]  # Position, Speed, Acceleration
 
-    def _generator(self, ampl, tau, pos_init, to=time.time(), t_middle=0.0):
-        table = [1]
-        for i in range(1, self._degree, 1):
-            n = len(table)
-            for j in range(0, n, 1):
-                table.append(-table[j])
-        n = len(self._phases)
-        for i in range(n):
-            del (self._phases[0])
-        for i in range(0, len(table) // 2, 1):
-            self._phases.append(Phase(table[i] * ampl, tau, to + i * tau, self._degree))
-        for i in range(len(table) // 2, len(table), 1):
-            self._phases.append(Phase(table[i] * ampl, tau, t_middle + to + i * tau, self._degree))
+        self.up_to_date = True
 
-    # set the ProfilVitesse generator to the fastest way from pos_init to goal
-    # both are steal standing points !!!
-    # default pos_init is the point you were, but you can reset it
-    def set_goal(self, goal, to=time.time()):
-        # find the fastest way
-        list_tau = list()
-        for i in range(1, self._degree + 1, 1):
-            B = 1.0
-            if i == 3:
-                B = 2.0
-            elif i == 4:
-                B = 8.0
-            elif i == 5:
-                B = 32.0
-            elif i == 6:
-                B = 32.0 * 8.0
-            elif i == 7:
-                B = 32.0 * 8.0 * 16.0
-            list_tau.append(pow(math.fabs(goal) / (B * self._maxis[i]), 1 / i))
-        print(list_tau)
-        tau = max(list_tau)
-        tau = max(tau, 0.1)
-        ampl = 2.0 * goal / (pow(2.0 * tau, self._degree))
-        print("tau: ", tau, " ;ampl: ", ampl)
-        # test
-        self._generator(ampl, tau, self._pos_init, to)
-        tableau_maxs = list()
+    def tf(self, index=6):
+        n = index
+        tf = 0.0
+        if n < 0:
+            return tf
+        if n > 6:
+            n = 6
+        for i in range(0, n+1):
+            tf += self.vector[i][1]
+        return tf
 
-    # for i in range(1, self._degree+1):
-    #	self.update(pow(2, i+1) * tau)
-    #	tableau_maxs.append(self._pos[i])
-    # print (goal, tableau_maxs)
+    def evaluate(self, t):
+        if t < 0:
+            return self.pos_init
+        else:
+            self.pos_current = [0.0, 0.0, 0.0]
+            for i in range(0, len(self.ampls)):  # Summing up the influance of each phase of acceleration
+                if t > self.tf(i-1):        # Dont evaluate the phases not yet begonen
+                    if t <= self.tf(i):     # Current phase
+                        self.pos_current[2] += self.vector[i][0] * (t-self.tf(i-1))
+                        self.pos_current[1] += self.vector[i][0] * math.pow(t - self.tf(i-1), 2) / 2.0
+                        self.pos_current[0] += self.vector[i][0] * math.pow(t - self.tf(i-1), 3) / 6.0
+                    else:                   # Past phases
+                        tf = self.tf(i)
+                        a = self.vector[i][0] * (self.vector[i][1])
+                        v = self.vector[i][0] * math.pow(self.vector[i][1], 2) / 2.0
+                        x = self.vector[i][0] * math.pow(self.vector[i][1], 3) / 6.0
+                        self.pos_current[2] += a
+                        self.pos_current[1] += v + a * (t-tf)
+                        self.pos_current[0] += x + v * (t-tf) + a * math.pow(t-tf, 2) / 2.0
+                else:
+                    break
+            self.pos_current[2] += self.pos_init[2]
+            self.pos_current[1] += self.pos_init[1] + t * self.pos_init[2]
+            self.pos_current[0] += self.pos_init[0] + t * self.pos_init[1] + t*t * self.pos_init[2] / 2.0
+            return self.pos_current
+
+    def set_start_point(self, x, v, a):
+        self.pos_init[0] = x
+        self.pos_init[1] = v
+        self.pos_init[2] = a
+        self.up_to_date = False
+
+    def set_goal_point(self, x, v, a):
+        self.pos_goal[0] = x
+        self.pos_goal[1] = v
+        self.pos_goal[2] = a
+        self.up_to_date = False
+
+    def _fill_vector(self):
+        for i in [0, 2, 4, 6]:
+            self.vector[i][0] = math.copysign(self.jm, self.ampls[i])
+            self.vector[i][1] = math.copysign(self.ampls[i], 1)
+        for i in [1, 3, 5]:
+            self.vector[i][0] = 0.0
+            self.vector[i][1] = math.copysign(self.ampls[i], 1)
+
+    def generate(self):
+        if not self.up_to_date:
+            # Initialise
+            self.ampls = []
+            self.vector = []
+            for i in range(0, 7):
+                self.ampls.append(0.0)
+                self.vector.append([0.0, 0.0])  # Jerk, duration
+            # Set corrections of acceleration
+            self.ampls[0] = -1 * self.pos_init[2] / self.jm
+            self.ampls[6] = self.pos_goal[2] / self.jm
+            self._fill_vector()
+
+            # Set corrections of speed, begin
+            buffer_xVa = self.evaluate(self.tf(2))
+            dv_begin = -1 * buffer_xVa[1]                  # Speed to build in phases 0 to 2
+            buffer_xVa2 = self.evaluate(self.tf(6))
+            dv_end = - self.pos_goal[1] - buffer_xVa[1] + buffer_xVa2[1]   # Speed to build in phases 4 to 6
+
+            qv_min = -self.am / self.jm
+            qv_max = self.am / self.jm
+
+            qv0 = math.copysign(math.sqrt(math.copysign(dv_begin/self.jm, 1)), dv_begin)
+
+            if qv0 < qv_min:    # -a_min at the end of phase 0
+                self.ampls[0] += qv_min
+                self.ampls[2] = - qv_min
+                self.ampls[1] = math.copysign((dv_begin + self.jm * math.pow(qv_min, 2)) / self.am, 1)
+
+            elif qv0 > qv_max:  # a_max
+                self.ampls[0] += qv_max
+                self.ampls[2] = - qv_max
+                self.ampls[1] = math.copysign((dv_begin - self.jm * math.pow(qv_max, 2)) / self.am, 1)
+
+            else:   # not saturated
+                self.ampls[0] += qv0
+                self.ampls[1] = 0
+                self.ampls[2] = - qv0
+
+            # correction of end speed
+            qv6 = math.copysign(math.sqrt(math.copysign(dv_end / self.jm, 1)), dv_end)
+
+            if qv6 < qv_min:  # a_max at the end of phase 5
+                self.ampls[6] += qv_min
+                self.ampls[4] = - qv_min
+                self.ampls[5] = math.copysign((dv_end + self.jm * math.pow(qv_min, 2)) / self.am, 1)
+
+            elif qv6 > qv_max:  # - a_max
+                self.ampls[6] += qv_max
+                self.ampls[4] = - qv_max
+                self.ampls[5] = math.copysign((dv_end - self.jm * math.pow(qv_max, 2)) / self.am, 1)
+
+            else:  # not saturated
+                self.ampls[6] += qv6
+                self.ampls[5] = 0
+                self.ampls[4] = - qv6
+
+            self._fill_vector()
+            # Set correction of deplacement
+
+            buffer_xVa = self.evaluate(self.tf())
+            ds = self.pos_goal[0] - buffer_xVa[0]
+
+            #qs =
 
 
 # test du module
 if __name__ == "__main__":
-    maxis = [1000.0, 100.0, 3., 1.0, 1000.0]
-    ma_phase = Phase(-1.0, 2.0, 1.0, 5)
-    ma_ProfilVitesse = ProfilVitesse(4, maxis)
-    print("degree4")
-    ma_ProfilVitesse.set_goal(10.0, 0.0)
-    for i in range(0, 201, 1):
-        ma_ProfilVitesse.update(i / 10.)
-        print(i / 10.0, ", ", ma_ProfilVitesse._pos)
+    myTraj = Traj7Seg(10, 5, 5)
+    myTraj.set_start_point(0, -5, 0.1)
+    myTraj.set_goal_point(0, 0, 0)
+    myTraj.generate()
+    print(myTraj.vector)
+    #myTraj.generate()
+    #print(myTraj.vector)
+    #print(myTraj.ampls)
+    for i in range(0,101):
+        pos = myTraj.evaluate(i* myTraj.tf()/100)
+        print(i* myTraj.tf()/100, pos[0], pos[1], pos[2])
+
+
+
